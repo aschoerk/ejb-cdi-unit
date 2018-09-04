@@ -1,6 +1,7 @@
 package com.oneandone.ejbcdiunit.internal;
 
 import java.lang.annotation.Annotation;
+import java.util.List;
 
 import javax.ejb.ApplicationException;
 import javax.ejb.EJB;
@@ -13,6 +14,7 @@ import javax.ejb.TransactionAttribute;
 import javax.ejb.TransactionAttributeType;
 import javax.ejb.TransactionManagement;
 import javax.ejb.TransactionManagementType;
+import javax.inject.Inject;
 import javax.interceptor.AroundInvoke;
 import javax.interceptor.Interceptor;
 import javax.interceptor.InvocationContext;
@@ -55,17 +57,46 @@ public class TransactionalInterceptor {
         level.set(getLevel() - 1);
     }
 
+    @Inject
+    private EjbInformationBean ejbInformationBean;
+
     private ApplicationException findApplicationException(Throwable ex) {
         // search for applicationexception
         Class<?> tmp = ex.getClass();
         ApplicationException applicationException = null;
         while (!tmp.equals(Throwable.class)) {
             applicationException = tmp.getAnnotation(ApplicationException.class);
+            if (applicationException == null) {
+                List<ApplicationExceptionDescription> ejbJarDescriptions = ejbInformationBean.getApplicationExceptionDescriptions();
+                for (final ApplicationExceptionDescription aed : ejbJarDescriptions) {
+                    if (aed.getClassName().equals(tmp.getName())) {
+                        applicationException = new ApplicationException() {
+                            @Override
+                            public Class<? extends Annotation> annotationType() {
+                                return ApplicationException.class;
+                            }
+
+                            @Override
+                            public boolean inherited() {
+                                return aed.isInherited();
+                            }
+
+                            @Override
+                            public boolean rollback() {
+                                return aed.isRollback();
+                            }
+                        };
+                        break;
+                    }
+                }
+
+            }
             if (applicationException != null) {
                 break;
             }
             tmp = tmp.getSuperclass();
         }
+
         if (applicationException != null && (tmp.equals(ex.getClass()) || applicationException.inherited())) {
             return applicationException;
         }
@@ -113,13 +144,13 @@ public class TransactionalInterceptor {
 
                 boolean passThroughRollbackException = true;
                 try {
-                    logger.info("Thread {} L{} changing  from {} to {} xid: {} in {}.{}",
+                    logger.debug("Thread {} L{} changing  from {} to {} xid: {} in {}.{}",
                             Thread.currentThread().getId(), getLevel(),
                             savedLastTransactionAttributeType == null ? "undefined" : savedLastTransactionAttributeType,
                             toPush, MDC.get("XID"), declaringClass.getSimpleName(), ctx.getMethod().getName());
                     return ctx.proceed();
                 } catch (Throwable ex) {
-                    logger.info("Thread {} L{} Exception {} in {} xid: {} in {}.{}",
+                    logger.debug("Thread {} L{} Exception {} in {} xid: {} in {}.{}",
                             Thread.currentThread().getId(), getLevel(),
                             ex.getClass().getSimpleName(), toPush, MDC.get("XID"), declaringClass.getSimpleName(),
                             ctx.getMethod().getName());
@@ -146,7 +177,7 @@ public class TransactionalInterceptor {
                         throw ex;
                     }
                 } finally {
-                    logger.info("Thread {} L{} finally   in {} xid: {} in {}.{}",
+                    logger.debug("Thread {} L{} finally   in {} xid: {} in {}.{}",
                             Thread.currentThread().getId(), getLevel(), toPush, MDC.get("XID"), declaringClass.getSimpleName(),
                             ctx.getMethod().getName());
                     try {
@@ -156,7 +187,7 @@ public class TransactionalInterceptor {
                             throw rbe;
                         }
                     } finally {
-                        logger.info("Thread {} L{} done      {} back to {} xid: {} in {}.{}",
+                        logger.debug("Thread {} L{} done      {} back to {} xid: {} in {}.{}",
                                 Thread.currentThread().getId(), getLevel(), toPush,
                                 savedLastTransactionAttributeType == null ? "undefined" : savedLastTransactionAttributeType,
                                 MDC.get("XID"), declaringClass.getSimpleName(), ctx.getMethod().getName());

@@ -3,16 +3,18 @@
 
     <groupId>net.oneandone</groupId>
     <artifactId>ejb-cdi-unit-examples-parent</artifactId>
-    <version>1.1.8-SNAPSHOT</version>
+    <version>1.1.17-SNAPSHOT</version>
     <packaging>pom</packaging>
     <modules>
         <module>ex1-1entity</module>
+        <module>ex1-1entity5</module>
         <module>ex2-syncconsumed</module>
         <module>ex3-asyncconsumedpoll</module>
         <module>ex4-asyncconsumedpush</module>
         <module>ex5-asyncconsumedjms1</module>
         <module>ex6-asyncconsumedjms2</module>
         <module>ex7-simplerest</module>
+        <module>mockito-example</module>
     </modules>
 
     <name>net.oneandone:ejb-cdi-unit-examples</name>
@@ -65,12 +67,10 @@
 
         <!-- test -->
         <mockito.version>1.10.19</mockito.version>
-        <cdi-unit.version>3.1.4</cdi-unit.version>
-        <weld.version>1.1.14.Final</weld.version>
         <!--hibernate-em.version>4.2.0.CR1</hibernate-em.version-->
         <hibernate-em.version>4.3.9.Final</hibernate-em.version>
         <hibernate-validator.version>4.3.2.Final</hibernate-validator.version>
-        <junit.version>4.12</junit.version>
+        <junit4.version>4.12</junit4.version>
         <mockrunner.version>1.1.2</mockrunner.version>
 
         <deployment.port>10099</deployment.port>
@@ -84,8 +84,11 @@
         <version.javaee_api>7.0</version.javaee_api>
         <org-reflections.version>0.9.10</org-reflections.version>
         <jaxrpc.version>1.1</jaxrpc.version>
-        <ejb-cdi-unit.version>1.1.8-SNAPSHOT</ejb-cdi-unit.version>
-
+        <ejb-cdi-unit.version>1.1.17-SNAPSHOT</ejb-cdi-unit.version>
+        <weld-se.version>2.3.5.Final</weld-se.version>
+        <junit5.version>5.3.0</junit5.version>
+        <surefire.version>2.22.0</surefire.version>
+        <junit-platform.version>1.3.0</junit-platform.version>
     </properties>
 
     <dependencies>
@@ -96,6 +99,17 @@
             <scope>provided</scope>
         </dependency>
 
+        <!-- logging -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>1.0.9</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <dependencyManagement>
@@ -103,6 +117,12 @@
             <dependency>
                 <groupId>${project.groupId}</groupId>
                 <artifactId>ejb-cdi-unit</artifactId>
+                <version>${ejb-cdi-unit.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>ejb-cdi-unit5</artifactId>
                 <version>${ejb-cdi-unit.version}</version>
                 <scope>test</scope>
             </dependency>
@@ -139,7 +159,7 @@
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-dbcp2</artifactId>
-                <version>RELEASE</version>
+                <version>2.5.0</version>
             </dependency>
 
             <!-- logging -->
@@ -147,18 +167,6 @@
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-api</artifactId>
                 <version>${slf4j.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.slf4j</groupId>
-                <artifactId>slf4j-log4j12</artifactId>
-                <version>${slf4j.version}</version>
-                <scope>provided</scope>
-            </dependency>
-            <dependency>
-                <groupId>org.slf4j</groupId>
-                <artifactId>slf4j-simple</artifactId>
-                <version>${slf4j.version}</version>
-                <scope>test</scope>
             </dependency>
 
             <!-- testing -->
@@ -190,15 +198,9 @@
                 <version>1.4.193</version>
             </dependency>
             <dependency>
-                <groupId>org.jglue.cdi-unit</groupId>
-                <artifactId>cdi-unit</artifactId>
-                <version>${cdi-unit.version}</version>
-                <exclusions>
-                    <exclusion>
-                        <groupId>org.jboss.weld.se</groupId>
-                        <artifactId>weld-se-core</artifactId>
-                    </exclusion>
-                </exclusions>
+                <groupId>org.jboss.spec.javax.transaction</groupId>
+                <artifactId>jboss-transaction-api_1.1_spec</artifactId>
+                <version>1.0.1.Final</version>
             </dependency>
             <dependency>
                 <groupId>org.hibernate</groupId>
@@ -213,7 +215,7 @@
             <dependency>
                 <groupId>junit</groupId>
                 <artifactId>junit</artifactId>
-                <version>${junit.version}</version>
+                <version>${junit4.version}</version>
                 <scope>test</scope>
             </dependency>
             <dependency>
@@ -223,14 +225,9 @@
                 <scope>test</scope>
             </dependency>
             <dependency>
-                <groupId>org.reflections</groupId>
-                <artifactId>reflections</artifactId>
-                <version>${org-reflections.version}</version>
-            </dependency>
-            <dependency>
                 <groupId>org.jboss.weld.se</groupId>
                 <artifactId>weld-se-core</artifactId>
-                <version>${weld.version}</version>
+                <version>${weld-se.version}</version>
                 <scope>test</scope>
             </dependency>
         </dependencies>
@@ -242,9 +239,26 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>${maven-compiler-plugin.version}</version>
                 <configuration>
-                    <source>1.7</source>
-                    <target>1.7</target>
+                    <source>1.8</source>
+                    <target>1.8</target>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>${surefire.version}</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.junit.platform</groupId>
+                        <artifactId>junit-platform-surefire-provider</artifactId>
+                        <version>${junit-platform.version}</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.junit.jupiter</groupId>
+                        <artifactId>junit-jupiter-engine</artifactId>
+                        <version>${junit5.version}</version>
+                    </dependency>
+                </dependencies>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

@@ -48,11 +48,6 @@
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
         </dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-log4j12</artifactId>
-            <scope>test</scope>
-        </dependency>
 
         <!-- testing -->
         <dependency>
@@ -70,10 +65,6 @@
             <artifactId>weld-se-core</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.jglue.cdi-unit</groupId>
-            <artifactId>cdi-unit</artifactId>
-        </dependency>
-        <dependency>
             <groupId>org.hibernate</groupId>
             <artifactId>hibernate-entitymanager</artifactId>
             <scope>test</scope>
@@ -86,7 +77,6 @@
         <dependency>
             <groupId>org.jboss.spec.javax.transaction</groupId>
             <artifactId>jboss-transaction-api_1.1_spec</artifactId>
-            <version>RELEASE</version>
         </dependency>
         <dependency>
             <groupId>com.mockrunner</groupId>
@@ -106,6 +96,7 @@
                 </configuration>
             </plugin>
             <plugin>
+                <!-- prevent deployment -->
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-war-plugin</artifactId>
                 <version>${maven-war-plugin.version}</version>

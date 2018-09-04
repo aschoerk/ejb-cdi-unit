@@ -19,7 +19,10 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.net.URL;
-import java.util.concurrent.ScheduledExecutorService;
+
+import javax.enterprise.context.ApplicationScoped;
+import javax.enterprise.inject.spi.BeanManager;
+import javax.naming.InitialContext;
 
 import org.jboss.weld.bootstrap.WeldBootstrap;
 import org.jboss.weld.bootstrap.api.Bootstrap;
@@ -28,7 +31,6 @@ import org.jboss.weld.bootstrap.spi.Deployment;
 import org.jboss.weld.environment.se.Weld;
 import org.jboss.weld.environment.se.WeldContainer;
 import org.jboss.weld.resources.spi.ResourceLoader;
-import org.jboss.weld.resources.spi.ScheduledExecutorServiceFactory;
 import org.jboss.weld.transaction.spi.TransactionServices;
 import org.jboss.weld.util.reflection.Formats;
 import org.junit.runners.BlockJUnit4ClassRunner;
@@ -36,8 +38,10 @@ import org.junit.runners.model.FrameworkMethod;
 import org.junit.runners.model.InitializationError;
 
 import com.oneandone.ejbcdiunit.CdiTestConfig;
+import com.oneandone.ejbcdiunit.CreationalContexts;
 import com.oneandone.ejbcdiunit.EjbUnitTransactionServices;
 import com.oneandone.ejbcdiunit.SupportEjbExtended;
+import com.oneandone.ejbcdiunit.internal.EjbInformationBean;
 
 /**
  * <code>&#064;CdiRunner</code> is a JUnit runner that uses a CDI container to
@@ -111,18 +115,7 @@ public class CdiRunner extends BlockJUnit4ClassRunner {
                     new WeldTestConfig(clazz, frameworkMethod.getMethod())
                             .addClass(SupportEjbExtended.class)
                             .addServiceConfig(new CdiTestConfig.ServiceConfig(TransactionServices.class, new EjbUnitTransactionServices()))
-                            .addServiceConfig(
-                                    new CdiTestConfig.ServiceConfig(ScheduledExecutorServiceFactory.class, new ScheduledExecutorServiceFactory() {
-                                        @Override
-                                        public ScheduledExecutorService get() {
-                                            return null;
-                                        }
-
-                                        @Override
-                                        public void cleanup() {
-
-                                    }
-                                    }));
+            ;
 
             weld = new Weld() {
 
@@ -147,8 +140,18 @@ public class CdiRunner extends BlockJUnit4ClassRunner {
             };
 
             try {
-
+                System.setProperty("java.naming.factory.initial", "com.oneandone.cdiunit.internal.naming.CdiUnitContextFactory");
                 container = weld.initialize();
+                InitialContext initialContext = new InitialContext();
+                final BeanManager beanManager = container.getBeanManager();
+                initialContext.bind("java:comp/BeanManager", beanManager);
+                try (CreationalContexts creationalContexts = new CreationalContexts(beanManager)) {
+                    EjbInformationBean ejbInformationBean =
+                            (EjbInformationBean) creationalContexts.create(EjbInformationBean.class, ApplicationScoped.class);
+                    ejbInformationBean.setApplicationExceptionDescriptions(weldTestConfig.getApplicationExceptionDescriptions());
+                } finally {
+                    initialContext.close();
+                }
             } catch (Throwable e) {
                 if (startupException == null) {
                     startupException = e;
@@ -174,7 +177,4 @@ public class CdiRunner extends BlockJUnit4ClassRunner {
 
         return t;
     }
-
-
-
 }

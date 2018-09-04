@@ -3,7 +3,7 @@
     <parent>
         <groupId>net.oneandone</groupId>
         <artifactId>ejb-cdi-unit-examples-parent</artifactId>
-        <version>1.1.8-SNAPSHOT</version>
+        <version>1.1.17-SNAPSHOT</version>
     </parent>
 
 
@@ -35,26 +35,11 @@
             <artifactId>cdi-api</artifactId>
             <scope>provided</scope>
         </dependency>
-        <dependency>
-            <groupId>org.jglue.cdi-unit</groupId>
-            <artifactId>cdi-unit</artifactId>
-        </dependency>
 
         <!-- general apis -->
         <dependency>
             <groupId>commons-lang</groupId>
             <artifactId>commons-lang</artifactId>
-        </dependency>
-
-        <!-- logging -->
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-log4j12</artifactId>
-            <scope>test</scope>
         </dependency>
 
         <!-- testing -->
@@ -85,7 +70,6 @@
         <dependency>
             <groupId>org.jboss.spec.javax.transaction</groupId>
             <artifactId>jboss-transaction-api_1.1_spec</artifactId>
-            <version>RELEASE</version>
         </dependency>
         <dependency>
             <groupId>com.mockrunner</groupId>

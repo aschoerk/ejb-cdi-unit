@@ -1,40 +1,18 @@
 package com.oneandone.ejbcdiunit.ejbs.appexc;
 
-import static org.hamcrest.Matchers.instanceOf;
-import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.fail;
+import com.oneandone.ejbcdiunit.ejbs.appexc.exceptions.*;
+import com.oneandone.ejbcdiunit.ejbs.appexc.exceptions.declared.notrtex.*;
+import com.oneandone.ejbcdiunit.ejbs.appexc.exceptions.declared.rtex.*;
 
 import javax.ejb.EJB;
 import javax.ejb.EJBException;
 import javax.inject.Inject;
 import javax.persistence.EntityManager;
-import javax.transaction.HeuristicMixedException;
-import javax.transaction.HeuristicRollbackException;
-import javax.transaction.NotSupportedException;
-import javax.transaction.RollbackException;
-import javax.transaction.SystemException;
-import javax.transaction.UserTransaction;
+import javax.transaction.*;
 
-import org.junit.Assert;
-import org.junit.Test;
-
-import com.oneandone.ejbcdiunit.ejbs.appexc.exceptions.AppExcExampleInheritedNoRollback;
-import com.oneandone.ejbcdiunit.ejbs.appexc.exceptions.AppExcExampleInheritedRollback;
-import com.oneandone.ejbcdiunit.ejbs.appexc.exceptions.AppExcExampleNotInheritedNoRollback;
-import com.oneandone.ejbcdiunit.ejbs.appexc.exceptions.AppExcExampleNotInheritedRollback;
-import com.oneandone.ejbcdiunit.ejbs.appexc.exceptions.AppRTExcExampleInheritedNoRollback;
-import com.oneandone.ejbcdiunit.ejbs.appexc.exceptions.AppRTExcExampleInheritedRollback;
-import com.oneandone.ejbcdiunit.ejbs.appexc.exceptions.AppRTExcExampleNotInheritedNoRollback;
-import com.oneandone.ejbcdiunit.ejbs.appexc.exceptions.AppRTExcExampleNotInheritedRollback;
-import com.oneandone.ejbcdiunit.ejbs.appexc.exceptions.DerivedAppExcExampleInheritedNoRollback;
-import com.oneandone.ejbcdiunit.ejbs.appexc.exceptions.DerivedAppExcExampleInheritedRollback;
-import com.oneandone.ejbcdiunit.ejbs.appexc.exceptions.DerivedAppExcExampleNotInheritedNoRollback;
-import com.oneandone.ejbcdiunit.ejbs.appexc.exceptions.DerivedAppExcExampleNotInheritedRollback;
-import com.oneandone.ejbcdiunit.ejbs.appexc.exceptions.DerivedAppRTExcExampleInheritedNoRollback;
-import com.oneandone.ejbcdiunit.ejbs.appexc.exceptions.DerivedAppRTExcExampleInheritedRollback;
-import com.oneandone.ejbcdiunit.ejbs.appexc.exceptions.DerivedAppRTExcExampleNotInheritedNoRollback;
-import com.oneandone.ejbcdiunit.ejbs.appexc.exceptions.DerivedAppRTExcExampleNotInheritedRollback;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.is;
 
 /**
  * @author aschoerk
@@ -80,28 +58,27 @@ public class TestBaseClass {
                 assertThat(thw, instanceOf(EJBException.class));
                 assertThat(thw.getCause(), is(exc));
             } else {
-                Assert.assertThat(thw, is(exc));
+                assertThat(thw, is(exc));
             }
         }
         try {
             userTransaction.commit();
             if (expected == orgCount) {
-                fail("Expected RollbackException");
+                throw new RuntimeException("Expected RollbackException");
             }
         } catch (RollbackException rbx) {
             if (expected > orgCount) {
-                fail("expected Transaction not to fail");
+                throw new RuntimeException("expected Transaction not to fail");
             }
         } catch (AssertionError aserr) {
             throw aserr;
         } catch (Throwable thw) {
-            fail("expected no expception to be catched anymore");
+            throw new RuntimeException("expected no expception to be catched anymore");
         }
-        Assert.assertThat(countEntities(), is(expected));
+        assertThat(countEntities(), is(expected));
 
     }
-
-    @Test
+    
     public void testAppExcInCurrentTra() throws Throwable {
         clearEntity();
         callAndCheckInCurrentTra(new AppExcExampleInheritedRollback("test"), 0L);
@@ -114,7 +91,35 @@ public class TestBaseClass {
         callAndCheckInCurrentTra(new DerivedAppExcExampleNotInheritedNoRollback("test"), 5L);
     }
 
-    @Test
+    
+    public void testDeclaredAppExcInCurrentTra() throws Throwable {
+        clearEntity();
+        callAndCheckInCurrentTra(new DeclaredAppExcExampleInheritedRollback("test"), 0L);
+        callAndCheckInCurrentTra(new DeclaredAppExcExampleNotInheritedRollback("test"), 0L);
+        callAndCheckInCurrentTra(new DeclaredAppExcExampleInheritedNoRollback("test"), 1L);
+        callAndCheckInCurrentTra(new DeclaredAppExcExampleNotInheritedNoRollback("test"), 2L);
+        callAndCheckInCurrentTra(new DeclaredAppExcExampleInheritedRollbackDefault("test"), 3L);
+        callAndCheckInCurrentTra(new DeclaredAppExcExampleNotInheritedRollbackDefault("test"), 4L);
+    }
+
+    
+    public void testDeclaredAppRtExcInCurrentTra() throws Throwable {
+        clearEntity();
+        callAndCheckInCurrentTra(new DeclaredAppRtExcExampleInheritedRollback("test"), 0L);
+        callAndCheckInCurrentTra(new DeclaredAppRtExcExampleNotInheritedRollback("test"), 0L);
+        callAndCheckInCurrentTra(new DeclaredAppRtExcExampleInheritedNoRollback("test"), 1L);
+        callAndCheckInCurrentTra(new DeclaredAppRtExcExampleNotInheritedNoRollback("test"), 2L);
+        callAndCheckInCurrentTra(new DeclaredAppRtExcExampleInheritedRollbackDefault("test"), 3L);
+        callAndCheckInCurrentTra(new DeclaredAppRtExcExampleNotInheritedRollbackDefault("test"), 4L);
+        callAndCheckInCurrentTra(new DerivedFromDeclaredAppRtExcExampleInheritedRollback("test"), 4L);
+        callAndCheckInCurrentTra(new DerivedFromDeclaredAppRtExcExampleNotInheritedRollback("test"), 4L, true);
+        callAndCheckInCurrentTra(new DerivedFromDeclaredAppRtExcExampleInheritedNoRollback("test"), 5L);
+        callAndCheckInCurrentTra(new DerivedFromDeclaredAppRtExcExampleNotInheritedNoRollback("test"), 5L, true);
+        callAndCheckInCurrentTra(new DerivedFromDeclaredAppRtExcExampleInheritedRollbackDefault("test"), 6L);
+        callAndCheckInCurrentTra(new DerivedFromDeclaredAppRtExcExampleNotInheritedRollbackDefault("test"), 6L, true);
+    }
+
+    
     public void testAppRTExcInCurrentTra() throws Throwable {
         clearEntity();
         callAndCheckInCurrentTra(new AppRTExcExampleInheritedRollback("test"), 0L);
@@ -127,7 +132,7 @@ public class TestBaseClass {
         callAndCheckInCurrentTra(new DerivedAppRTExcExampleNotInheritedNoRollback("test"), 3L, true);
     }
 
-    @Test
+    
     public void testAppExcInRequired() throws Throwable {
         clearEntity();
         saveAndThrowCaller.callInRequired(new AppExcExampleInheritedRollback("test"), 0L);
@@ -140,7 +145,7 @@ public class TestBaseClass {
         saveAndThrowCaller.callInRequired(new DerivedAppExcExampleNotInheritedNoRollback("test"), 5L);
     }
 
-    @Test
+    
     public void testAppRTExcInRequired() throws Throwable {
         clearEntity();
         saveAndThrowCaller.callInRequired(new AppRTExcExampleInheritedRollback("test"), 0L);
@@ -153,7 +158,7 @@ public class TestBaseClass {
         saveAndThrowCaller.callInRequired(new DerivedAppRTExcExampleNotInheritedNoRollback("test"), 3L, true);
     }
 
-    @Test
+    
     public void testAppExcInRequiresNew() throws Throwable {
         clearEntity();
         saveAndThrowCaller.callInRequiresNew(new AppExcExampleInheritedRollback("test"), 0L);
@@ -166,7 +171,7 @@ public class TestBaseClass {
         saveAndThrowCaller.callInRequiresNew(new DerivedAppExcExampleNotInheritedNoRollback("test"), 5L);
     }
 
-    @Test
+    
     public void testAppRTExcInRequiresNew() throws Throwable {
         clearEntity();
         saveAndThrowCaller.callInRequiresNew(new AppRTExcExampleInheritedRollback("test"), 0L);
@@ -179,7 +184,7 @@ public class TestBaseClass {
         saveAndThrowCaller.callInRequiresNew(new DerivedAppRTExcExampleNotInheritedNoRollback("test"), 3L, true);
     }
 
-    @Test
+    
     public void testAppExcInSupports() throws Throwable {
         clearEntity();
         saveAndThrowCaller.callInSupports(new AppExcExampleInheritedRollback("test"), 0L);
@@ -192,7 +197,7 @@ public class TestBaseClass {
         saveAndThrowCaller.callInSupports(new DerivedAppExcExampleNotInheritedNoRollback("test"), 5L);
     }
 
-    @Test
+    
     public void testAppRTExcInSupports() throws Throwable {
         clearEntity();
         saveAndThrowCaller.callInSupports(new AppRTExcExampleInheritedRollback("test"), 0L);
@@ -205,7 +210,7 @@ public class TestBaseClass {
         saveAndThrowCaller.callInSupports(new DerivedAppRTExcExampleNotInheritedNoRollback("test"), 3L, true);
     }
 
-    @Test
+    
     public void testAppExcInNotSupported() throws Throwable {
         clearEntity();
         saveAndThrowCaller.callInNotSupported(new AppExcExampleInheritedRollback("test"), 0L);
@@ -218,7 +223,7 @@ public class TestBaseClass {
         saveAndThrowCaller.callInNotSupported(new DerivedAppExcExampleNotInheritedNoRollback("test"), 5L);
     }
 
-    @Test
+    
     public void testAppRTExcInNotSupported() throws Throwable {
         clearEntity();
         saveAndThrowCaller.callInNotSupported(new AppRTExcExampleInheritedRollback("test"), 0L);

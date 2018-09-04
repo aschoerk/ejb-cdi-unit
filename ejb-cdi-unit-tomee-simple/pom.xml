@@ -5,7 +5,7 @@
    <parent>
       <groupId>net.oneandone</groupId>
       <artifactId>ejb-cdi-unit-parent</artifactId>
-      <version>1.1.8-SNAPSHOT</version>
+      <version>1.1.12-SNAPSHOT</version>
    </parent>
 
 
@@ -25,17 +25,12 @@
 
    <properties>
       <java.min.version>1.8</java.min.version>
-      <maven.min.version>3.0.0</maven.min.version>
 
       <version.junit>4.11</version.junit>
       <version.javaee_api>7.0</version.javaee_api>
 
       <version.tomee>7.0.3</version.tomee>
    </properties>
-
-   <prerequisites>
-      <maven>${maven.min.version}</maven>
-   </prerequisites>
 
    <dependencyManagement>
       <dependencies>
@@ -69,14 +64,6 @@
       <dependency>
          <groupId>org.slf4j</groupId>
          <artifactId>slf4j-api</artifactId>
-      </dependency>
-      <dependency>
-         <groupId>org.slf4j</groupId>
-         <artifactId>slf4j-log4j12</artifactId>
-      </dependency>
-      <dependency>
-         <groupId>org.slf4j</groupId>
-         <artifactId>slf4j-simple</artifactId>
       </dependency>
    </dependencies>
 

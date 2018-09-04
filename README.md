@@ -1,8 +1,46 @@
 ejb-cdi-unit
 ============
-Make test driven development of ejb-3.x services and processes easy. Supports jboss7, wildfly, weld 1.x and 2.x, camunda 7.x.
+Make test driven development of ejb-3.x services and processes easy.
+Supports:
+
+* JBoss7 and Wildfly 10
+* Java 7 (until 1.1.12) Java8 and Java 10
+* JUnit 4, JUnitRules
+* JUnit 5 including nested classes, TestInstances(Testclasses) may only Inject
+* Weld 1, 2, 3
+* Processengine: Camunda 7.x
+
+
 ![Build Status](https://travis-ci.org/1and1/ejb-cdi-unit.svg?branch=master)
 
+
+
+# Contents
+<!-- TOC depthFrom:1 depthTo:6 withLinks:1 updateOnSave:1 orderedList:0 -->
+
+- [Contents](#contents)
+- [First Example](#first-example)
+- [Motivation](#motivation)
+- [History](#history)
+- [Requirements](#requirements)
+- [Solution](#solution)
+- [Usage](#usage)
+- [Maven-Modules](#maven-modules)
+- [Java9+](#java9)
+- [JUnit5](#junit5)
+- [Examples](#examples)
+	- [One Service and One Entity](#one-service-and-one-entity)
+	- [One Service and One Synchronously Consumed Service](#one-service-and-one-synchronously-consumed-service)
+	- [One Service and One Asynchronously Consumed Service](#one-service-and-one-asynchronously-consumed-service)
+	- [One Service and One Asynchronously Consumed Service Plus Asynchronous Callback](#one-service-and-one-asynchronously-consumed-service-plus-asynchronous-callback)
+	- [One Service and One Asynchronously Consumed Service internally using Messaging](#one-service-and-one-asynchronously-consumed-service-internally-using-messaging)
+	- [Test of a Rest-Service](#test-of-a-rest-service)
+	- [Test of a camunda BPM processing](#test-of-a-camunda-bpm-processing)
+- [Restrictions](#restrictions)
+- [Acknowledgments](#acknowledgments)
+- [License](#license)
+
+<!-- /TOC -->
 
 # First Example
 
@@ -21,32 +59,6 @@ Make test driven development of ejb-3.x services and processes easy. Supports jb
 
 ![Test for Service](images/SampleEjbUnitTest.png)
 
-
-
-# Contents
-<!-- TOC depthFrom:1 depthTo:6 withLinks:1 updateOnSave:1 orderedList:0 -->
-
-- [First Example](#first-example)
-- [Contents](#contents)
-- [Motivation](#motivation)
-- [History](#history)
-- [Requirements](#requirements)
-- [Solution](#solution)
-- [Usage](#usage)
-- [Modules](#modules)
-- [Examples](#examples)
-	- [One Service and One Entity](#one-service-and-one-entity)
-	- [One Service and One Synchronously Consumed Service](#one-service-and-one-synchronously-consumed-service)
-	- [One Service and One Asynchronously Consumed Service](#one-service-and-one-asynchronously-consumed-service)
-	- [One Service and One Asynchronously Consumed Service Plus Asynchronous Callback](#one-service-and-one-asynchronously-consumed-service-plus-asynchronous-callback)
-	- [One Service and One Asynchronously Consumed Service internally using Messaging](#one-service-and-one-asynchronously-consumed-service-internally-using-messaging)
-	- [Test of a Rest-Service](#test-of-a-rest-service)
-	- [Test of a camunda BPM processing](#test-of-a-camunda-bpm-processing)
-- [Restrictions](#restrictions)
-- [Acknowledgments](#acknowledgments)
-- [License](#license)
-
-<!-- /TOC -->
 
 
 # Motivation
@@ -120,17 +132,98 @@ The usage does not differ very much from cdi-unit:
 * Services consumed by the Artifact might need Simulations. (same as cdi-unit)
 * Rest-Services: Good experiences have been made in using the RestEasy MockDispatcherFactory.  (same as cdi-unit)
 
-# Modules
+# Maven-Modules
 
 * ejb-cdi-unit is the module providing the test extensions, it is available from maven central
+* ejb-cdi-unit5 is the module providing the test extensions for JUnit5, it is available from maven central
 * ejb-cdi-unit-test-war is code used by
 	* ejb-cdi-unit-tests in regression tests
+	* ejb-cdi-unit-tests5 regression tests using JUnit5
 	* ejb-cdi-unit-tomee to show how the tests can be implemented using tomee embedded
 	* ejb-cdi-unit-arq to prove that the modules behaviour fits to wildfly
 * ejb-cdi-unit-tomee-simple contains some code doing simple tests only with tomee. ejb-cdi-unit is not used here.
 * ejb-cdi-unit-camunda contains the camunda-bpm-platform/engine-cdi - tests ported from arquillian to ejb-cdi-unit.
 * examples contains showcases including some diagrams which should show the usage together with the internal working of ejb-cdi-unit. Some proposed solutions for easy simulation of remote Services and callbacks are also shown there.
 
+# Java9+
+<a name="java9"></a>
+
+At the moment, there is no ejb-application-server that supports modules. Therefore the scan for CDI-Classes only uses the classpath. To support Java9+ the reflections-dependency has been rewritten to use Java8-features and to get rid of guava (because of possible compatibility-issues with the code under test) The new artifact is named net.oneandone:reflections8. 
+
+# JUnit5
+
+## Concept
+As realized in the JUnit4 implementation, the Testclass "lives" inside the CDI-Container as applicationscoped bean. 
+This works, because the Runner can create the actual instance of the testclass. This does not work anymore in the case you want to support
+JUnitRules or JUnit5. Then the actual testclass is created by the framework, that does not use the CDI-Container to handle the instances.
+
+The solution of ejb-cdi-unit is:
+
+*Restrict the testclasses to support only @Inject*. 
+Handling @Inject allows the full integration of the tests inside the CDI-Container. All beans to be tested can be injected and used
+inside the test-methods.
+ 
+The restrictions normally are not so imposing. 
+* PostConstruct, PreDestroy will not work
+* Interceptors will not work. 
+* Decorators will not work
+* Producers may not use not injected Instance-variables
+but normally this is not important for the testclasses.
+
+Technically the TestInstances are fetched as they are created by JUnit5 and the injected instance-variables are initialized
+by copying them from another Instance of the test-class which is created during the initialization of the CDI-Container.
+
+## Usage
+
+
+**pom properties**
+```XML
+<properties>
+	<ejb-cdi-unit.version>1.1.16</ejb-cdi-unit.version>
+        <weld-se.version>2.3.5.Final</weld-se.version>
+        <junit5.version>5.3.0</junit5.version>
+        <surefire.version>2.22.0</surefire.version>
+        <junit-platform.version>1.3.0</junit-platform.version>
+</properties>
+```
+**dependencies**
+```XML
+ <dependency>
+	<groupId>net.oneandone</groupId>
+	<artifactId>ejb-cdi-unit5</artifactId>
+	<version>${ejb-cdi-unit.version}</version>
+	<scope>test</scope>
+</dependency>
+<dependency>
+	<groupId>org.jboss.weld.se</groupId>
+	<artifactId>weld-se-core</artifactId>
+	<version>${weld-se.version}</version>
+	<scope>test</scope>
+</dependency>
+```
+**New surefire plugin**
+```XML
+<plugin>
+	<groupId>org.apache.maven.plugins</groupId>
+	<artifactId>maven-surefire-plugin</artifactId>
+	<version>${surefire.version}</version>
+	<dependencies>
+		<dependency>
+			<groupId>org.junit.platform</groupId>
+			<artifactId>junit-platform-surefire-provider</artifactId>
+			<version>${junit-platform.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.junit.jupiter</groupId>
+			<artifactId>junit-jupiter-engine</artifactId>
+			<version>${junit5.version}</version>
+		</dependency>
+	</dependencies>
+</plugin>
+```
+
+* Annotate the JUnit5-Testclass with @ExtendWith(JUnit5Extension)
+Examples: see: [tests](https://github.com/1and1/ejb-cdi-unit/tree/master/ejb-cdi-unit-tests5) and [ex1-1entity5](https://github.com/1and1/ejb-cdi-unit/tree/master/examples/ex1-1entity5)
 
 # Examples
 

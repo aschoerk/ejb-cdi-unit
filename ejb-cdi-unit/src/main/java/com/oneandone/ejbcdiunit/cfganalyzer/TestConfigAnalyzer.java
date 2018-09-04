@@ -1,29 +1,21 @@
 package com.oneandone.ejbcdiunit.cfganalyzer;
 
-import java.io.File;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.net.MalformedURLException;
-import java.net.URISyntaxException;
 import java.net.URL;
-import java.net.URLClassLoader;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Set;
-import java.util.jar.Attributes;
-import java.util.jar.JarInputStream;
-import java.util.jar.Manifest;
+import java.util.function.Predicate;
 
 import javax.decorator.Decorator;
 import javax.enterprise.inject.Alternative;
@@ -40,18 +32,17 @@ import org.jglue.cdiunit.ActivatedAlternatives;
 import org.jglue.cdiunit.AdditionalClasses;
 import org.jglue.cdiunit.AdditionalClasspaths;
 import org.jglue.cdiunit.AdditionalPackages;
-import org.jglue.cdiunit.CdiRunner;
-import org.jglue.cdiunit.internal.TypesScanner;
 import org.mockito.Mock;
-import org.reflections.ReflectionUtils;
-import org.reflections.Reflections;
-import org.reflections.util.ConfigurationBuilder;
+import org.reflections8.ReflectionUtils;
+import org.reflections8.Reflections;
+import org.reflections8.util.ConfigurationBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Predicate;
 import com.oneandone.ejbcdiunit.CdiTestConfig;
+import com.oneandone.ejbcdiunit.cdiunit.EjbJarClasspath;
 import com.oneandone.ejbcdiunit.cdiunit.ExcludedClasses;
+import com.oneandone.ejbcdiunit.internal.TypesScanner;
 
 /**
  * Analyzes the current Testconfiguration of a cdi-unit testclass together with the classpath and an optional TestConfiguration. This is the
@@ -61,23 +52,23 @@ import com.oneandone.ejbcdiunit.cdiunit.ExcludedClasses;
  */
 public abstract class TestConfigAnalyzer {
 
-    static boolean weldBefore24 = false;
     private static Logger log = LoggerFactory.getLogger(TestConfigAnalyzer.class);
     protected Set<URL> cdiClasspathEntries = new HashSet<URL>();
     protected Set<String> discoveredClasses = new LinkedHashSet<String>();
-    protected Set<String> alternatives = new HashSet<String>();
+    protected Collection<Metadata<String>> alternatives = new ArrayList<Metadata<String>>();
     protected Set<Class<?>> classesToProcess = new LinkedHashSet<Class<?>>();
     protected Set<Class<?>> classesProcessed = new HashSet<Class<?>>();
+    protected Class<?> ejbJarClasspathExample = null;
     protected Collection<Metadata<? extends Extension>> extensions = new ArrayList<Metadata<? extends Extension>>();
     protected Collection<Metadata<String>> enabledInterceptors = new ArrayList<Metadata<String>>();
     protected Collection<Metadata<String>> enabledDecorators = new ArrayList<Metadata<String>>();
     protected Collection<Metadata<String>> enabledAlternativeStereotypes = new ArrayList<Metadata<String>>();
     protected Set<Class<?>> classesToIgnore;
-    List<URL> classpathEntries;
+    Set<URL> classpathEntries;
     private boolean analyzeStarted = false;
 
     private static Constructor metaDataConstructor;
-
+    protected String weldVersion;
 
     public TestConfigAnalyzer() {
 
@@ -85,20 +76,22 @@ public abstract class TestConfigAnalyzer {
 
     protected <T> Metadata<T> createMetadata(T value, String location) {
         try {
-            if (metaDataConstructor == null) {
+            return new org.jboss.weld.bootstrap.spi.helpers.MetadataImpl<>(value, location);
+        } catch (NoClassDefFoundError e) {
+            // MetadataImpl moved to a new package in Weld 2.4, old copy removed in 3.0
+            try {
                 // If Weld < 2.4, the new package isn't there, so we try the old package.
-                // noinspection unchecked
+                //noinspection unchecked
                 Class<Metadata<T>> oldClass = (Class<Metadata<T>>) Class.forName("org.jboss.weld.metadata.MetadataImpl");
                 Constructor<Metadata<T>> ctor = oldClass.getConstructor(Object.class, String.class);
-                metaDataConstructor = ctor;
+                return ctor.newInstance(value, location);
+            } catch (ReflectiveOperationException e1) {
+                throw new RuntimeException(e1);
             }
-            return ((Constructor<Metadata<T>>) metaDataConstructor).newInstance(value, location);
-        } catch (ReflectiveOperationException e1) {
-            throw new RuntimeException(e1);
         }
     }
 
-    public List<URL> getClasspathEntries() {
+    public Set<URL> getClasspathEntries() {
         return classpathEntries;
     }
 
@@ -114,7 +107,7 @@ public abstract class TestConfigAnalyzer {
         return discoveredClasses;
     }
 
-    public Set<String> getAlternatives() {
+    public Collection<Metadata<String>> getAlternatives() {
         return alternatives;
     }
 
@@ -165,7 +158,7 @@ public abstract class TestConfigAnalyzer {
         checkSetAnalyzeStarted();
         init(testClass, config);
         populateCdiClasspathSet();
-        initContainerSpecific(testClass, null);
+        initContainerSpecific(testClass, testMethod);
         transferConfig(config);
 
         while (!classesToProcess.isEmpty()) {
@@ -221,6 +214,16 @@ public abstract class TestConfigAnalyzer {
                     }
                 }
 
+                EjbJarClasspath ejbJarClasspath = c.getAnnotation(EjbJarClasspath.class);
+                if (ejbJarClasspath != null && ejbJarClasspathExample == null) {
+                    ejbJarClasspathExample = ejbJarClasspath.value();
+                    if (ejbJarClasspathExample != null) {
+                        final URL path = ejbJarClasspathExample.getProtectionDomain().getCodeSource().getLocation();
+                        addDeploymentDescriptor(config, path);
+                    }
+                }
+
+
                 AdditionalPackages additionalPackages = c.getAnnotation(AdditionalPackages.class);
                 if (additionalPackages != null) {
                     for (Class<?> additionalPackage : additionalPackages.value()) {
@@ -248,8 +251,8 @@ public abstract class TestConfigAnalyzer {
                     } else {
                         throw new RuntimeException("Trying to exclude in not toplevelclass: " + c);
                     }
-
                 }
+
 
                 for (Annotation a : c.getAnnotations()) {
                     if (!a.annotationType().getPackage().getName().equals("org.jglue.cdiunit")) {
@@ -305,6 +308,8 @@ public abstract class TestConfigAnalyzer {
         classesToIgnore = findMockedClassesOfTest(testClass);
         classesToIgnore.addAll(config.getExcludedClasses());
         classesToProcess.add(testClass);
+        weldVersion = config.weldVersion;
+
     }
 
     private boolean belongsTo(Class<?> c, Class<?> testClass) {
@@ -321,7 +326,7 @@ public abstract class TestConfigAnalyzer {
         classesToProcess.add(alternativeClass);
 
         if (!isAlternativeStereotype(alternativeClass)) {
-            alternatives.add(alternativeClass.getName());
+            alternatives.add(createMetadata(alternativeClass.getName(),alternativeClass.getName()));
         }
     }
 
@@ -332,7 +337,7 @@ public abstract class TestConfigAnalyzer {
                 .setUrls(additionalPackage.getProtectionDomain().getCodeSource().getLocation()).filterInputsBy(new Predicate<String>() {
 
                     @Override
-                    public boolean apply(String input) {
+                    public boolean test(String input) {
                         return input.startsWith(packageName)
                                 && !input.substring(packageName.length() + 1, input.length() - 6).contains(".");
 
@@ -352,6 +357,8 @@ public abstract class TestConfigAnalyzer {
         classesToProcess.addAll(ReflectionUtils.forNames(
                 reflections.getStore().get(TypesScanner.class.getSimpleName()).keySet(),
                 new ClassLoader[] { getClass().getClassLoader() }));
+
+        cdiClasspathEntries.add(path);
     }
 
 
@@ -382,7 +389,6 @@ public abstract class TestConfigAnalyzer {
     private Set<Class<?>> findMockedClassesOfTest(Class<?> testClass, Set<Class<?>> mockedClasses) {
 
         try {
-
             for (Field field : testClass.getDeclaredFields()) {
                 if (field.isAnnotationPresent(Mock.class)) {
                     Class<?> type = field.getType();
@@ -407,74 +413,12 @@ public abstract class TestConfigAnalyzer {
         return mockedClasses;
     }
 
-    private void populateCdiClasspathSet() throws IOException {
-        ClassLoader classLoader = TestConfigAnalyzer.class.getClassLoader();
-        classpathEntries = new ArrayList<URL>(Arrays.asList(((URLClassLoader) classLoader).getURLs()));
-
-        // If this is surefire we need to get the original claspath
-        try (JarInputStream firstEntry = new JarInputStream(classpathEntries.get(0).openStream())) {
-            Manifest manifest = firstEntry.getManifest();
-            if (manifest != null) {
-                String classpath = (String) manifest.getMainAttributes().get(Attributes.Name.CLASS_PATH);
-                if (classpath != null) {
-                    String[] manifestEntries = classpath.split(" ?file:");
-                    for (String entry : manifestEntries) {
-                        if (entry.length() > 0) {
-                            classpathEntries.add(new URL("file:" + entry));
-                        }
-                    }
-                }
-            }
-        }
-
-        for (URL url : classpathEntries) {
-            URLClassLoader cl = new URLClassLoader(new URL[] { url }, null);
-            try {
-
-                if (url.getFile().endsWith("/classes/")) {
-                    URL webInfBeans = new URL(url, "../../src/main/webapp/WEB-INF/beans.xml");
-                    try {
-                        webInfBeans.openConnection().connect();;
-                        cdiClasspathEntries.add(url);
-                    } catch (IOException e) {
-
-                    }
-                }
-                URL resource = cl.getResource("META-INF/beans.xml");
-                boolean cdiUnit = url.equals(CdiRunner.class.getProtectionDomain().getCodeSource().getLocation());
-                if (cdiUnit || resource != null || isDirectoryOnClasspath(url)) {
-                    cdiClasspathEntries.add(url);
-                }
-
-            } finally {
-                try {
-                    Method method = cl.getClass().getMethod("close");
-                    method.invoke(cl);
-                } catch (NoSuchMethodException e) {
-                    // Ignore, we might be running on Java 6
-                } catch (IllegalAccessException e) {
-                    // Ignore, we might be running on Java 6
-                } catch (InvocationTargetException e) {
-                    // Ignore, we might be running on Java 6
-                }
-            }
-        }
-        log.trace("CDI classpath classpathEntries discovered:");
-        for (URL url : cdiClasspathEntries) {
-            log.trace("{}", url);
-        }
-
+    private void addDeploymentDescriptor(final CdiTestConfig config, final URL url) throws IOException {
+        new EjbJarParser(config, url).invoke();
     }
 
-    private boolean isDirectoryOnClasspath(URL classpathEntry) {
-        try {
-            return new File(classpathEntry.toURI()).isDirectory();
-        } catch (IllegalArgumentException e) {
-            // Ignore, thrown by File constructor for unsupported URIs
-        } catch (URISyntaxException e) {
-            // Ignore, does not denote an URI that points to a directory
-        }
-        return false;
+    private void populateCdiClasspathSet() throws IOException {
+        classpathEntries = new ClasspathSetPopulator().invoke(cdiClasspathEntries);
     }
 
     private boolean isCdiClass(Class<?> c) {
@@ -492,4 +436,7 @@ public abstract class TestConfigAnalyzer {
     }
 
 
+    public void setClasspathEntries(final Set<URL> classpathEntries) {
+        this.classpathEntries = classpathEntries;
+    }
 }

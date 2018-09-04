@@ -1,14 +1,14 @@
 package com.oneandone.ejbcdiunit.ejb;
 
+import com.oneandone.ejbcdiunit.EjbUnitRunner;
+import com.oneandone.ejbcdiunit.cdiunit.EjbJarClasspath;
+import com.oneandone.ejbcdiunit.ejbs.appexc.TestBaseClass;
+import com.oneandone.ejbcdiunit.entities.TestEntity1;
+import com.oneandone.ejbcdiunit.persistence.TestPersistenceFactory;
 import org.jglue.cdiunit.AdditionalClasses;
 import org.jglue.cdiunit.AdditionalPackages;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-
-import com.oneandone.ejbcdiunit.EjbUnitRunner;
-import com.oneandone.ejbcdiunit.ejbs.appexc.TestBaseClass;
-import com.oneandone.ejbcdiunit.entities.TestEntity1;
-import com.oneandone.ejbcdiunit.persistence.TestPersistenceFactory;
 
 /**
  * @author aschoerk
@@ -16,12 +16,25 @@ import com.oneandone.ejbcdiunit.persistence.TestPersistenceFactory;
 @RunWith(EjbUnitRunner.class)
 @AdditionalClasses({ TestPersistenceFactory.class })
 @AdditionalPackages({ TestBaseClass.class, TestEntity1.class })
+@EjbJarClasspath(TestBaseClass.class)
 public class AppExceptionTest extends TestBaseClass {
 
     @Override
     @Test
     public void testAppExcInCurrentTra() throws Throwable {
         super.testAppExcInCurrentTra();
+    }
+
+    @Override
+    @Test
+    public void testDeclaredAppExcInCurrentTra() throws Throwable {
+        super.testDeclaredAppExcInCurrentTra();
+    }
+
+    @Override
+    @Test
+    public void testDeclaredAppRtExcInCurrentTra() throws Throwable {
+        super.testDeclaredAppRtExcInCurrentTra();
     }
 
     @Override
@@ -77,4 +90,6 @@ public class AppExceptionTest extends TestBaseClass {
     public void testAppRTExcInNotSupported() throws Throwable {
         super.testAppRTExcInNotSupported();
     }
+
+
 }

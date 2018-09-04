@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.net.URL;
-import java.util.concurrent.ScheduledExecutorService;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.spi.BeanManager;
@@ -17,7 +16,6 @@ import org.jboss.weld.bootstrap.api.CDI11Bootstrap;
 import org.jboss.weld.environment.se.Weld;
 import org.jboss.weld.environment.se.WeldContainer;
 import org.jboss.weld.resources.spi.ResourceLoader;
-import org.jboss.weld.resources.spi.ScheduledExecutorServiceFactory;
 import org.jboss.weld.transaction.spi.TransactionServices;
 import org.jboss.weld.util.reflection.Formats;
 import org.junit.Test;
@@ -31,6 +29,7 @@ import com.oneandone.ejbcdiunit.CdiTestConfig.ServiceConfig;
 import com.oneandone.ejbcdiunit.cdiunit.Weld11TestUrlDeployment;
 import com.oneandone.ejbcdiunit.cdiunit.WeldTestConfig;
 import com.oneandone.ejbcdiunit.cdiunit.WeldTestUrlDeployment;
+import com.oneandone.ejbcdiunit.internal.EjbInformationBean;
 
 /**
  * @author aschoerk
@@ -38,7 +37,7 @@ import com.oneandone.ejbcdiunit.cdiunit.WeldTestUrlDeployment;
 public class EjbUnitRule implements TestRule {
     private static Logger logger = LoggerFactory.getLogger(EjbUnitRunner.class);
     private final Object instance;
-    private final CdiTestConfig cdiTestConfig;
+    private CdiTestConfig cdiTestConfig;
     private Method method;
 
     public EjbUnitRule(final Object instance, CdiTestConfig cdiTestConfig) {
@@ -92,18 +91,9 @@ public class EjbUnitRule implements TestRule {
                                 .addClass(SupportEjbExtended.class)
                                 .addServiceConfig(new ServiceConfig(TransactionServices.class,
                                         new EjbUnitTransactionServices()))
-                                .addServiceConfig(
-                                        new CdiTestConfig.ServiceConfig(ScheduledExecutorServiceFactory.class, new ScheduledExecutorServiceFactory() {
-                                            @Override
-                                            public ScheduledExecutorService get() {
-                                                return null;
-                                            }
+                ;
+                EjbUnitRule.this.cdiTestConfig = weldTestConfig;
 
-                                            @Override
-                                            public void cleanup() {
-
-                                        }
-                                        }));
 
                 weld = new Weld() {
 
@@ -162,7 +152,7 @@ public class EjbUnitRule implements TestRule {
                 }
                 throw startupException;
             }
-            System.setProperty("java.naming.factory.initial", "org.jglue.cdiunit.internal.naming.CdiUnitContextFactory");
+            System.setProperty("java.naming.factory.initial", "com.oneandone.cdiunit.internal.naming.CdiUnitContextFactory");
             InitialContext initialContext = new InitialContext();
             final BeanManager beanManager = container.getBeanManager();
             initialContext.bind("java:comp/BeanManager", beanManager);
@@ -170,6 +160,9 @@ public class EjbUnitRule implements TestRule {
                 try {
                     Class.forName("javax.ejb.EJBContext");
                     creationalContexts.create(EjbUnitBeanInitializerClass.class, ApplicationScoped.class);
+                    EjbInformationBean ejbInformationBean =
+                            (EjbInformationBean) creationalContexts.create(EjbInformationBean.class, ApplicationScoped.class);
+                    ejbInformationBean.setApplicationExceptionDescriptions(cdiTestConfig.getApplicationExceptionDescriptions());
                     Object test = creationalContexts.create(clazz, ApplicationScoped.class);
 
                     initWeldFields(test, test.getClass());
