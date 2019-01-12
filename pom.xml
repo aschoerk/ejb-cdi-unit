@@ -1,28 +1,15 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>net.oneandone</groupId>
-    <artifactId>ejb-cdi-unit-parent</artifactId>
-    <version>1.1.17-SNAPSHOT</version>
+    <groupId>net.oneandone.ioc-unit</groupId>
+    <artifactId>ioc-unit-parent</artifactId>
+    <version>2.0.1-alpha-06-SNAPSHOT</version>
     <packaging>pom</packaging>
-    <modules>
-        <module>ejb-cdi-unit</module>
-        <module>ejb-cdi-unit5</module>
-        <module>ejb-cdi-unit-test-war</module>
-        <module>ejb-cdi-unit-tests</module>
-        <module>ejb-cdi-unit-tests5</module>
-        <module>ejb-cdi-unit-simulators</module>
-        <module>ejb-cdi-unit-camunda</module>
-        <module>ejb-cdi-unit-arq</module>
-        <!-- module>ejb-cdi-unit-tomee</module>
-        <module>ejb-cdi-unit-tomee-simple</module-->
-        <module>examples</module>
-    </modules>
 
-    <name>net.oneandone:ejb-cdi-unit-parent</name>
-    <description>The parent-pom for ejb-cdi-unit a module developed to ease test driven ejb3.x service-development.
+    <name>net.oneandone.ioc-unit:ioc-unit-parent</name>
+    <description>The parent-pom for ioc-unit a module developed to ease test driven ejb3.x service-development.
     </description>
-    <url>https://github.com/1and1/ejb-cdi-unit</url>
+    <url>https://github.com/1and1/ioc-unit</url>
 
     <licenses>
         <license>
@@ -39,6 +26,11 @@
             <organizationUrl>http://www.1and1.com</organizationUrl>
         </developer>
     </developers>
+
+    <modules>
+
+    </modules>
+
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -60,7 +52,7 @@
         <maven-resources-plugin.version>2.6</maven-resources-plugin.version>
         <maven-site-plugin.version>3.3</maven-site-plugin.version>
         <maven-source-plugin.version>2.2.1</maven-source-plugin.version>
-        <maven-surefire-plugin.version>2.22.0</maven-surefire-plugin.version>
+        <maven-surefire-plugin.version>3.0.0-M2</maven-surefire-plugin.version>
         <maven-war-plugin.version>3.0.0</maven-war-plugin.version>
 
         <!-- external -->
@@ -72,9 +64,9 @@
         <mockito.version>2.19.0</mockito.version>
         <!-- weld.version>1.1.14.Final</weld.version-->
         <junit4.version>4.12</junit4.version>
-        <junit5.version>5.3.0</junit5.version>
-        <junit-platform.version>1.3.0</junit-platform.version>
-        <mockrunner.version>1.1.2</mockrunner.version>
+        <junit5.version>5.3.2</junit5.version>
+        <junit-platform.version>1.3.2</junit-platform.version>
+        <mockrunner.version>2.0.1</mockrunner.version>
         <version.cglib>3.2.5</version.cglib>
 
         <deployment.port>10099</deployment.port>
@@ -85,14 +77,237 @@
         <site-url>${site.deploy.base.url}/${project.groupId}/${project.version}</site-url>
         <javassist.version>3.20.0-GA</javassist.version>
 
-        <version.javaee_api>7.0</version.javaee_api>
+        <version.javaee_api>8.0</version.javaee_api>
         <reflections8.version>0.11.1</reflections8.version>
         <jaxrpc.version>1.1</jaxrpc.version>
 
         <camunda-engine.version>7.5.0</camunda-engine.version>
         <delta-spike.version>1.0.1</delta-spike.version>
-
+        <weld.compile.version>3.0.4.Final</weld.compile.version>
+        <version.cdi-api>2.0</version.cdi-api>
     </properties>
+
+    <profiles>
+        <profile>
+            <id>base</id>
+            <modules>
+                <module>weld-starter</module>
+                <module>ioc-unit-analyzer</module>
+                <module>ioc-unit</module>
+                <module>ioc-unit-mocks</module>
+                <module>ioc-unit-ejb</module>
+                <module>ioc-unit-contexts</module>
+                <!--module>purecdi-tests</module-->
+            </modules>
+        </profile>
+        <profile>
+            <id>arquillian</id>
+            <modules>
+                <module>ioc-unit-test-war</module>
+                <module>ioc-unit-arq</module>
+            </modules>
+        </profile>
+        <profile>
+            <id>junit4</id>
+            <modules>
+                <module>ioc-unit-mocks</module>
+                <module>purecdi-tests</module>
+                <module>ioc-unit-test-war</module>
+                <module>ioc-unit-tests</module>
+                <!--module>ioc-unit-simulators</module-->
+                <!--module>ioc-unit-camunda</module-->
+                <module>examples</module>
+            </modules>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <version>${maven-surefire-plugin.version}</version>
+                        <dependencies>
+                            <dependency>
+                                <groupId>org.apache.maven.surefire</groupId>
+                                <artifactId>surefire-junit47</artifactId>
+                                <version>${maven-surefire-plugin.version}</version>
+                            </dependency>
+                        </dependencies>
+                        <configuration>
+                            <systemPropertyVariables>
+                                <javax.xml.parsers.DocumentBuilderFactory>
+                                    com.sun.org.apache.xerces.internal.jaxp.DocumentBuilderFactoryImpl
+                                </javax.xml.parsers.DocumentBuilderFactory>
+                            </systemPropertyVariables>
+
+                            <reportFormat>plain</reportFormat>
+                            <redirectTestOutputToFile>true</redirectTestOutputToFile>
+                            <!-- Sets the VM argument line used when unit tests are run. -->
+                            <!--argLine> - -add-modules java.xml,java.sql -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5006</argLine-->
+                            <argLine>
+                                -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5006
+                            </argLine>
+                            <forkCount>1</forkCount>
+                            <reuseForks>false</reuseForks>
+                            <classpathDependencyExcludes>
+                                <classpathDependencyExclude>net.oneandone:purecdi-tests</classpathDependencyExclude>
+                            </classpathDependencyExcludes>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>junit5</id>
+            <modules>
+                <module>ioc-unit-test-war</module>
+                <module>ioc-unit-tests5</module>
+                <module>examples</module>
+            </modules>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <version>${maven-surefire-plugin.version}</version>
+                        <configuration>
+                            <systemPropertyVariables>
+                                <javax.xml.parsers.DocumentBuilderFactory>
+                                    com.sun.org.apache.xerces.internal.jaxp.DocumentBuilderFactoryImpl
+                                </javax.xml.parsers.DocumentBuilderFactory>
+                            </systemPropertyVariables>
+
+                            <reportFormat>plain</reportFormat>
+                            <redirectTestOutputToFile>true</redirectTestOutputToFile>
+                            <!-- Sets the VM argument line used when unit tests are run. -->
+                            <!--argLine> - -add-modules java.xml,java.sql -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005</argLine-->
+                            <argLine>
+                                -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005
+                            </argLine>
+                            <classpathDependencyExcludes>
+                                <classpathDependencyExclude>net.oneandone:purecdi-tests</classpathDependencyExclude>
+                            </classpathDependencyExcludes>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>release-sign-artifacts</id>
+            <activation>
+                <property>
+                    <name>performRelease</name>
+                    <value>true</value>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <version>${maven-gpg-plugin.version}</version>
+                        <executions>
+                            <execution>
+                                <id>sign-artifacts</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>sign</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>weld1.1</id>
+            <properties>
+                <weld.version>1.1.14.Final</weld.version>
+                <weld-spi.version>1.1.Final</weld-spi.version>
+                <version.org.hibernate.api>1.0.1.Final</version.org.hibernate.api>
+                <version.org.hibernate>4.3.6.Final</version.org.hibernate>
+                <version.org.hibernate.validator>4.3.1.Final</version.org.hibernate.validator>
+                <version.cdi-api>1.0</version.cdi-api>
+            </properties>
+            <dependencies>
+                <dependency>
+                    <groupId>net.oneandone.ioc-unit</groupId>
+                    <artifactId>weld1-starter</artifactId>
+                    <version>${project.version}</version>
+                    <scope>test</scope>
+                </dependency>
+            </dependencies>
+        </profile>
+        <profile>
+            <id>weld2.3</id>
+            <properties>
+                <weld.version>2.3.5.Final</weld.version>
+                <weld-spi.version>2.3.Final</weld-spi.version>
+                <weld-api.version>2.3.Final</weld-api.version>
+                <version.org.hibernate.api>1.0.0.Final</version.org.hibernate.api>
+                <version.org.hibernate>5.0.10.Final</version.org.hibernate>
+                <version.org.hibernate.validator>5.2.4.Final</version.org.hibernate.validator>
+                <version.cdi-api>1.2</version.cdi-api>
+            </properties>
+            <dependencies>
+                <dependency>
+                    <groupId>net.oneandone.ioc-unit</groupId>
+                    <artifactId>weld2-starter</artifactId>
+                    <version>${project.version}</version>
+                    <scope>test</scope>
+                </dependency>
+            </dependencies>
+        </profile>
+        <profile>
+            <id>weld2.4</id>
+            <properties>
+                <weld.version>2.4.2.Final</weld.version>
+                <weld-spi.version>2.4.Final</weld-spi.version>
+                <version.org.hibernate.api>1.0.0.Final</version.org.hibernate.api>
+                <version.org.hibernate>5.0.10.Final</version.org.hibernate>
+                <version.org.hibernate.validator>5.2.4.Final</version.org.hibernate.validator>
+                <version.cdi-api>1.2</version.cdi-api>
+            </properties>
+            <dependencies>
+                <dependency>
+                    <groupId>org.jboss.weld.se</groupId>
+                    <artifactId>weld-se</artifactId>
+                    <version>2.4.2.Final</version>
+                    <scope>test</scope>
+                </dependency>
+                <dependency>
+                    <groupId>net.oneandone.ioc-unit</groupId>
+                    <artifactId>weld2-starter</artifactId>
+                    <version>${project.version}</version>
+                    <scope>test</scope>
+                    <exclusions>
+                        <exclusion>
+                            <groupId>org.jboss.weld.se</groupId>
+                            <artifactId>weld-se</artifactId>
+                        </exclusion>
+                    </exclusions>
+                </dependency>
+            </dependencies>
+        </profile>
+        <profile>
+            <id>weld3.0</id>
+            <properties>
+                <weld.version>3.0.5.Final</weld.version>
+                <weld-spi.version>3.0.SP4</weld-spi.version>
+                <version.org.hibernate.api>1.0.0.Final</version.org.hibernate.api>
+                <version.org.hibernate>5.0.10.Final</version.org.hibernate>
+                <version.org.hibernate.validator>5.2.4.Final</version.org.hibernate.validator>
+                <version.cdi-api>2.0.SP1</version.cdi-api>
+            </properties>
+            <dependencies>
+                <dependency>
+                    <groupId>net.oneandone.ioc-unit</groupId>
+                    <artifactId>weld3-starter</artifactId>
+                    <version>${project.version}</version>
+                    <scope>test</scope>
+                </dependency>
+            </dependencies>
+        </profile>
+    </profiles>
+
 
     <dependencies>
         <dependency>
@@ -101,25 +316,45 @@
             <version>${version.javaee_api}</version>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>net.oneandone.ioc-unit</groupId>
+            <artifactId>weld-starter-base</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-params</artifactId>
+            <version>${junit5.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+            <version>${junit5.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-engine</artifactId>
+            <version>${junit5.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.maven.surefire</groupId>
+            <artifactId>surefire-logger-api</artifactId>
+            <version>2.21.0</version>
+            <!-- to get around bug https://github.com/junit-team/junit5/issues/1367 -->
+            <scope>test</scope>
+            <optional>true</optional>
+        </dependency>
     </dependencies>
 
     <dependencyManagement>
         <dependencies>
-            <dependency>
-                <groupId>${project.groupId}</groupId>
-                <artifactId>ejb-cdi-unit</artifactId>
-                <version>${project.version}</version>
-                <exclusions>
-                    <exclusion>
-                        <groupId>org.javassist</groupId>
-                        <artifactId>javassist</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>org.reflections</groupId>
-                        <artifactId>reflections</artifactId>
-                    </exclusion>
-                </exclusions>
-            </dependency>
             <dependency>
                 <groupId>javax.enterprise</groupId>
                 <artifactId>cdi-api</artifactId>
@@ -155,6 +390,12 @@
                 <artifactId>commons-lang</artifactId>
                 <version>2.6</version>
             </dependency>
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-lang3</artifactId>
+                <version>3.5</version>
+            </dependency>
+
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-dbcp2</artifactId>
@@ -221,6 +462,12 @@
                 <groupId>org.hibernate.javax.persistence</groupId>
                 <artifactId>hibernate-jpa-2.0-api</artifactId>
                 <version>${version.org.hibernate.api}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.junit.vintage</groupId>
+                <artifactId>junit-vintage-engine</artifactId>
+                <version>${junit5.version}</version>
+                <scope>test</scope>
             </dependency>
             <dependency>
                 <groupId>junit</groupId>
@@ -309,28 +556,7 @@
                     <scmBranch>gh-pages</scmBranch>
                 </configuration>
             </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <version>${maven-surefire-plugin.version}</version>
-                <configuration>
-                    <systemPropertyVariables>
-                        <javax.xml.parsers.DocumentBuilderFactory>
-                            com.sun.org.apache.xerces.internal.jaxp.DocumentBuilderFactoryImpl
-                        </javax.xml.parsers.DocumentBuilderFactory>
-                    </systemPropertyVariables>
-
-                    <reportFormat>plain</reportFormat>
-                    <redirectTestOutputToFile>true</redirectTestOutputToFile>
-                    <!-- Sets the VM argument line used when unit tests are run. -->
-                    <!--argLine> - -add-modules java.xml,java.sql -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005</argLine-->
-                    <argLine>
-                        -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005
-                    </argLine>
-                    <reuseForks>false</reuseForks>
-                </configuration>
-            </plugin>
-            <plugin>
+            <!--plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
                 <configuration>
@@ -344,7 +570,20 @@
                         <link>http://www.slf4j.org/apidocs/</link>
                     </links>
                 </configuration>
+            </plugin-->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>attach-javadocs</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
+
         </plugins>
 
         <pluginManagement>
@@ -378,14 +617,14 @@
     </build>
 
     <scm>
-        <url>https://github.com/1and1/ejb-cdi-unit</url>
-        <connection>scm:git:ssh://git@github.com/1and1/ejb-cdi-unit.git</connection>
-        <developerConnection>scm:git:ssh://git@github.com/1and1/ejb-cdi-unit.git</developerConnection>
+        <url>https://github.com/1and1/ioc-unit</url>
+        <connection>scm:git:ssh://git@github.com/1and1/ioc-unit.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/1and1/ioc-unit.git</developerConnection>
         <tag>HEAD</tag>
     </scm>
     <issueManagement>
         <system>GitHub</system>
-        <url>https://github.com/1and1/ejb-cdi-unit/issues/</url>
+        <url>https://github.com/1and1/ioc-unit/issues/</url>
     </issueManagement>
     <inceptionYear>2017</inceptionYear>
 
@@ -400,88 +639,6 @@
         </repository>
     </distributionManagement>
 
-    <profiles>
-        <profile>
-            <id>release-sign-artifacts</id>
-            <activation>
-                <property>
-                    <name>performRelease</name>
-                    <value>true</value>
-                </property>
-            </activation>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-gpg-plugin</artifactId>
-                        <version>${maven-gpg-plugin.version}</version>
-                        <executions>
-                            <execution>
-                                <id>sign-artifacts</id>
-                                <phase>verify</phase>
-                                <goals>
-                                    <goal>sign</goal>
-                                </goals>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-        <profile>
-            <id>weld1.1</id>
-            <activation>
-                <activeByDefault>true</activeByDefault>
-            </activation>
-            <properties>
-                <weld.version>1.1.14.Final</weld.version>
-                <version.org.hibernate.api>1.0.1.Final</version.org.hibernate.api>
-                <version.org.hibernate>4.2.2.Final</version.org.hibernate>
-                <version.org.hibernate.validator>4.3.1.Final</version.org.hibernate.validator>
-                <version.cdi-api>1.1</version.cdi-api>
-            </properties>
-        </profile>
-        <profile>
-            <id>weld2.3</id>
-            <properties>
-                <weld.version>2.3.5.Final</weld.version>
-                <weld-spi.version>2.3.Final</weld-spi.version>
-                <weld-api.version>2.3.Final</weld-api.version>
-                <version.org.hibernate.api>1.0.0.Final</version.org.hibernate.api>
-                <version.org.hibernate>5.0.10.Final</version.org.hibernate>
-                <version.org.hibernate.validator>5.2.4.Final</version.org.hibernate.validator>
-                <version.cdi-api>1.2</version.cdi-api>
-            </properties>
-        </profile>
-        <profile>
-            <id>weld2.4</id>
-            <properties>
-                <weld.version>2.4.2.Final</weld.version>
-                <version.org.hibernate.api>1.0.0.Final</version.org.hibernate.api>
-                <version.org.hibernate>5.0.10.Final</version.org.hibernate>
-                <version.org.hibernate.validator>5.2.4.Final</version.org.hibernate.validator>
-                <version.cdi-api>1.2</version.cdi-api>
-            </properties>
-        </profile>
-        <profile>
-            <id>weld3.0</id>
-            <properties>
-                <weld.version>3.0.0.Final</weld.version>
-                <version.org.hibernate.api>1.0.0.Final</version.org.hibernate.api>
-                <version.org.hibernate>5.0.10.Final</version.org.hibernate>
-                <version.org.hibernate.validator>5.2.4.Final</version.org.hibernate.validator>
-                <version.cdi-api>2.0</version.cdi-api>
-            </properties>
-            <dependencies>
-                <dependency>
-                    <groupId>org.jboss.weld.module</groupId>
-                    <artifactId>weld-web</artifactId>
-                    <version>3.0.0.Final</version>
-                    <scope>test</scope>
-                </dependency>
-            </dependencies>
-        </profile>
-    </profiles>
 
 </project>
 
