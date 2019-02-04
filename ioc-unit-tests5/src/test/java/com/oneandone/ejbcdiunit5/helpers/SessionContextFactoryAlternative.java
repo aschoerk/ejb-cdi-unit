@@ -9,8 +9,8 @@ import javax.enterprise.inject.spi.BeanManager;
 import javax.enterprise.inject.spi.InjectionPoint;
 import javax.inject.Inject;
 
-import com.oneandone.cdi.testanalyzer.annotations.ProducesAlternative;
-import com.oneandone.cdi.tester.ejb.resourcesimulators.SessionContextSimulation;
+import com.oneandone.iocunit.analyzer.annotations.ProducesAlternative;
+import com.oneandone.iocunit.ejb.resourcesimulators.SessionContextSimulation;
 
 /**
  * @author aschoerk

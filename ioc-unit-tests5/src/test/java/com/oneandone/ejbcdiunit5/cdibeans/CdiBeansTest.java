@@ -5,15 +5,15 @@ import javax.inject.Inject;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import com.oneandone.cdi.testanalyzer.annotations.SutPackages;
-import com.oneandone.cdi.tester.JUnit5Extension;
-import com.oneandone.ejbcdiunit.cdibeans.AppScopedServiceBean;
+import com.oneandone.iocunit.analyzer.annotations.SutPackages;
+import com.oneandone.iocunit.IocJUnit5Extension;
+import com.oneandone.iocunitejb.cdibeans.AppScopedServiceBean;
 
 /**
  * @author aschoerk
  */
 @SutPackages({ AppScopedServiceBean.class })
-@ExtendWith(JUnit5Extension.class)
+@ExtendWith(IocJUnit5Extension.class)
 public class CdiBeansTest {
 
     @Inject

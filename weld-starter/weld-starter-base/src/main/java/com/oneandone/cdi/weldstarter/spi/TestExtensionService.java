@@ -30,9 +30,7 @@ public interface TestExtensionService {
 
     default void handleExtraClassAnnotation(final Annotation annotation, Class<?> c) {}
 
-    default void explicitlyExcluded(Class<?> c) {}
-
-    ;
+    default void explicitlyExcluded(Class<?> c) {};
 
     default Collection<Class<? extends Annotation>> injectAnnotations() {
         return Collections.EMPTY_LIST;
@@ -60,7 +58,7 @@ public interface TestExtensionService {
 
     default void preStartupAction(WeldSetupClass weldSetup) {}
 
-    default void postStartupAction(CreationalContexts creationalContexts) {}
+    default void postStartupAction(CreationalContexts creationalContexts, WeldStarter weldStarter) {}
 
     default void initAnalyze() {}
 
@@ -76,6 +74,14 @@ public interface TestExtensionService {
     }
 
     default List<? extends Class<?>> fakeClasses() {
+        return Collections.EMPTY_LIST;
+    }
+
+    default Collection<? extends Class<?>> excludeFromIndexScan()  {
+        return Collections.EMPTY_LIST;
+    }
+
+    default Collection<? extends Class<?>> excludeAsInjects()  {
         return Collections.EMPTY_LIST;
     }
 }

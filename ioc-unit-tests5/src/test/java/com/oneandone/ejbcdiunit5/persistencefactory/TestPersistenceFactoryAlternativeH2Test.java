@@ -13,16 +13,16 @@ import javax.transaction.SystemException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import com.oneandone.cdi.testanalyzer.annotations.ExcludedClasses;
-import com.oneandone.cdi.testanalyzer.annotations.TestClasses;
-import com.oneandone.cdi.tester.JUnit5Extension;
-import com.oneandone.cdi.tester.ejb.SessionContextFactory;
-import com.oneandone.cdi.tester.ejb.persistence.TestPersistenceFactory;
+import com.oneandone.iocunit.analyzer.annotations.ExcludedClasses;
+import com.oneandone.iocunit.analyzer.annotations.TestClasses;
+import com.oneandone.iocunit.IocJUnit5Extension;
+import com.oneandone.iocunit.ejb.SessionContextFactory;
+import com.oneandone.iocunit.ejb.persistence.TestPersistenceFactory;
 
 /**
  * @author aschoerk
  */
-@ExtendWith(JUnit5Extension.class)
+@ExtendWith(IocJUnit5Extension.class)
 @TestClasses({ TestPersistenceFactoryAlternative.class, SessionContextFactory.class })
 @ExcludedClasses({ TestPersistenceFactory.class })
 public class TestPersistenceFactoryAlternativeH2Test extends PersistenceFactoryTestBase {

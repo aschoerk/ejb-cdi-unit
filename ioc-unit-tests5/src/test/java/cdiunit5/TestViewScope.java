@@ -2,9 +2,9 @@ package cdiunit5;
 
 import java.io.Serializable;
 
-import com.oneandone.cdi.testanalyzer.annotations.TestClasses;
-import com.oneandone.cdi.tester.JUnit5Extension;
-import com.oneandone.cdi.tester.contexts.internal.jsf.ViewScopeExtension;
+import com.oneandone.iocunit.analyzer.annotations.TestClasses;
+import com.oneandone.iocunit.IocJUnit5Extension;
+import com.oneandone.iocunit.contexts.internal.jsf.ViewScopeExtension;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -14,7 +14,7 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Provider;
 
-@ExtendWith(JUnit5Extension.class)
+@ExtendWith(IocJUnit5Extension.class)
 @TestClasses({ ViewScopeExtension.class, TestViewScope.G2ViewScoped.class })
 public class TestViewScope extends BaseTest {
     @Inject

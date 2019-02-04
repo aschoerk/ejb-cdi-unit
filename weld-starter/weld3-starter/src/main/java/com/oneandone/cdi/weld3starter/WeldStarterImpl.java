@@ -1,5 +1,6 @@
 package com.oneandone.cdi.weld3starter;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
@@ -9,6 +10,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 
 import javax.enterprise.inject.Instance;
 import javax.enterprise.inject.spi.DeploymentException;
@@ -28,6 +31,7 @@ import org.jboss.weld.ejb.spi.EjbDescriptor;
 import org.jboss.weld.environment.se.Weld;
 import org.jboss.weld.environment.se.WeldContainer;
 import org.jboss.weld.resources.spi.ResourceLoader;
+import org.jboss.weld.resources.spi.ScheduledExecutorServiceFactory;
 import org.jboss.weld.util.reflection.Formats;
 
 import com.oneandone.cdi.weldstarter.BeansXmlImpl;
@@ -51,10 +55,23 @@ public class WeldStarterImpl implements WeldStarter {
     }
 
     public void start(WeldSetup weldSetup) {
+        WeldSetup.ServiceConfig serviceConfig = new WeldSetup.ServiceConfig(ScheduledExecutorServiceFactory.class,
+                new ScheduledExecutorServiceFactory() {
+                    @Override
+                    public ScheduledExecutorService get() {
+                        return new ScheduledThreadPoolExecutor(10);
+                    }
+
+                    @Override
+                    public void cleanup() {
+
+                    }
+                });
+        weldSetup.getServices().add(serviceConfig);
         this.version = Formats.version(WeldBootstrap.class.getPackage());
         System.setProperty("org.jboss.weld.bootstrap.concurrentDeployment", "false");
 
-        Weld weld = new Weld() {
+        Weld weld = new Weld("WeldStarter" + weldSetup.getNewInstanceNumber()) {
 
             protected Deployment createDeployment(final ResourceLoader resourceLoader, final CDI11Bootstrap bootstrap) {
 
@@ -150,10 +167,9 @@ public class WeldStarterImpl implements WeldStarter {
     }
 
     @Override
-    public <T> T get(final Class<T> clazz) {
-        return container.instance().select(clazz).get();
+    public <T> T get(final Class<T> clazz, Annotation... qualifiers) {
+        return container.instance().select(clazz, qualifiers).get();
     }
-
     public WeldContainer getContainer() {
         return container;
     }
@@ -226,5 +242,10 @@ public class WeldStarterImpl implements WeldStarter {
         } catch (ClassNotFoundException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    @Override
+    public String getContainerId() {
+        return container.getId();
     }
 }

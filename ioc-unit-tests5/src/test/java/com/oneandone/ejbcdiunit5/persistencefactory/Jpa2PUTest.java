@@ -26,15 +26,15 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.oneandone.cdi.testanalyzer.annotations.EnabledAlternatives;
-import com.oneandone.cdi.testanalyzer.annotations.SutClasses;
-import com.oneandone.cdi.testanalyzer.annotations.TestClasses;
-import com.oneandone.cdi.tester.JUnit5Extension;
-import com.oneandone.cdi.tester.ejb.persistence.TestTransaction;
-import com.oneandone.ejbcdiunit.ClassWithTwoDifferentEntityManagers;
-import com.oneandone.ejbcdiunit.cdiunit.Pu1Em;
-import com.oneandone.ejbcdiunit.cdiunit.Pu2Em;
-import com.oneandone.ejbcdiunit.entities.TestEntity1;
+import com.oneandone.iocunit.analyzer.annotations.EnabledAlternatives;
+import com.oneandone.iocunit.analyzer.annotations.SutClasses;
+import com.oneandone.iocunit.analyzer.annotations.TestClasses;
+import com.oneandone.iocunit.IocJUnit5Extension;
+import com.oneandone.iocunit.ejb.persistence.TestTransaction;
+import com.oneandone.iocunitejb.ClassWithTwoDifferentEntityManagers;
+import com.oneandone.iocunitejb.cdiunit.Pu1Em;
+import com.oneandone.iocunitejb.cdiunit.Pu2Em;
+import com.oneandone.iocunitejb.entities.TestEntity1;
 import com.oneandone.ejbcdiunit5.helpers.J2eeSimTest1Factory;
 import com.oneandone.ejbcdiunit5.helpers.J2eeSimTest2Factory;
 import com.oneandone.ejbcdiunit5.helpers.TestResources;
@@ -42,7 +42,7 @@ import com.oneandone.ejbcdiunit5.helpers.TestResources;
 /**
  * @author aschoerk
  */
-@ExtendWith(JUnit5Extension.class)
+@ExtendWith(IocJUnit5Extension.class)
 @EnabledAlternatives({ TestResources.class })
 @TestClasses({ J2eeSimTest1Factory.class, J2eeSimTest2Factory.class })
 @SutClasses(ClassWithTwoDifferentEntityManagers.class)

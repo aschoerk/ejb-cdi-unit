@@ -19,18 +19,17 @@ import javax.transaction.SystemException;
 import javax.transaction.UserTransaction;
 
 import org.hamcrest.MatcherAssert;
-import org.junit.Ignore;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.oneandone.cdi.testanalyzer.annotations.EnabledAlternatives;
-import com.oneandone.cdi.testanalyzer.annotations.TestClasses;
-import com.oneandone.cdi.tester.JUnit5Extension;
-import com.oneandone.cdi.tester.ejb.persistence.PersistenceFactory;
-import com.oneandone.ejbcdiunit.entities.TestEntity1;
+import com.oneandone.iocunit.analyzer.annotations.EnabledAlternatives;
+import com.oneandone.iocunit.analyzer.annotations.TestClasses;
+import com.oneandone.iocunit.IocJUnit5Extension;
+import com.oneandone.iocunit.ejb.persistence.PersistenceFactory;
+import com.oneandone.iocunitejb.entities.TestEntity1;
 import com.oneandone.ejbcdiunit5.helpers.J2eeSimMySqlFactory;
 import com.oneandone.ejbcdiunit5.helpers.MySqlStarter;
 import com.oneandone.ejbcdiunit5.helpers.TestResources;
@@ -39,7 +38,7 @@ import com.oneandone.ejbcdiunit5.helpers.TestResources;
  * @author aschoerk
  */
 @Disabled
-@ExtendWith(JUnit5Extension.class)
+@ExtendWith(IocJUnit5Extension.class)
 @EnabledAlternatives({ J2eeSimMySqlFactory.class, TestResources.class })
 @TestClasses({ MySqlStarter.class })
 public class MySqlTest {

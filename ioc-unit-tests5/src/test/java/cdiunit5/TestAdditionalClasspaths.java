@@ -6,12 +6,15 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import com.oneandone.cdi.testanalyzer.annotations.SutClasspaths;
-import com.oneandone.cdi.tester.JUnit5Extension;
-import com.oneandone.ejbcdiunit.cdiunit.ExternalInterface;
+import com.oneandone.iocunit.analyzer.annotations.ExcludedClasses;
+import com.oneandone.iocunit.analyzer.annotations.SutClasspaths;
+import com.oneandone.iocunit.IocJUnit5Extension;
+import com.oneandone.iocunitejb.cdiunit.ExternalInterface;
+import com.oneandone.iocunitejb.resources.Resources;
 
 @SutClasspaths(ExternalInterface.class)
-@ExtendWith(JUnit5Extension.class)
+@ExcludedClasses(Resources.class)
+@ExtendWith(IocJUnit5Extension.class)
 public class TestAdditionalClasspaths {
 
     @Inject

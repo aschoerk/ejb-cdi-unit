@@ -1,20 +1,20 @@
 package com.oneandone.ejbcdiunit5.ejb;
 
-import com.oneandone.cdi.testanalyzer.annotations.SutPackages;
-import com.oneandone.cdi.testanalyzer.annotations.TestClasses;
-import com.oneandone.cdi.testanalyzer.annotations.TestPackages;
-import com.oneandone.cdi.tester.JUnit5Extension;
-import com.oneandone.cdi.tester.ejb.EjbJarClasspath;
-import com.oneandone.cdi.tester.ejb.persistence.TestPersistenceFactory;
-import com.oneandone.ejbcdiunit.ejbs.appexc.TestBaseClass;
-import com.oneandone.ejbcdiunit.entities.TestEntity1;
+import com.oneandone.iocunit.analyzer.annotations.SutPackages;
+import com.oneandone.iocunit.analyzer.annotations.TestClasses;
+import com.oneandone.iocunit.analyzer.annotations.TestPackages;
+import com.oneandone.iocunit.IocJUnit5Extension;
+import com.oneandone.iocunit.ejb.EjbJarClasspath;
+import com.oneandone.iocunit.ejb.persistence.TestPersistenceFactory;
+import com.oneandone.iocunitejb.ejbs.appexc.TestBaseClass;
+import com.oneandone.iocunitejb.entities.TestEntity1;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 /**
  * @author aschoerk
  */
-@ExtendWith(JUnit5Extension.class)
+@ExtendWith(IocJUnit5Extension.class)
 @TestClasses({ TestPersistenceFactory.class })
 @TestPackages(TestBaseClass.class)
 @SutPackages({ TestEntity1.class })

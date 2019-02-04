@@ -10,16 +10,16 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import com.oneandone.cdi.testanalyzer.annotations.SutClasses;
-import com.oneandone.cdi.tester.JUnit5Extension;
-import com.oneandone.cdi.tester.ejb.EjbTransactional;
-import com.oneandone.cdi.tester.ejb.persistence.TestPersistenceFactory;
-import com.oneandone.ejbcdiunit.entities.TestEntity1;
+import com.oneandone.iocunit.analyzer.annotations.SutClasses;
+import com.oneandone.iocunit.IocJUnit5Extension;
+import com.oneandone.iocunit.ejb.EjbTransactional;
+import com.oneandone.iocunit.ejb.persistence.TestPersistenceFactory;
+import com.oneandone.iocunitejb.entities.TestEntity1;
 
 /**
  * @author aschoerk
  */
-@ExtendWith(JUnit5Extension.class)
+@ExtendWith(IocJUnit5Extension.class)
 @SutClasses({ TestPersistenceFactory.class, TestEntity1.class })
 public class NonEjbTransactionTest {
 

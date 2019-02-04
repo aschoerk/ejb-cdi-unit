@@ -1,15 +1,15 @@
 package cdiunit5;
 
-import com.oneandone.cdi.testanalyzer.annotations.EnabledAlternatives;
-import com.oneandone.cdi.testanalyzer.annotations.TestClasses;
-import com.oneandone.cdi.tester.JUnit5Extension;
+import com.oneandone.iocunit.analyzer.annotations.EnabledAlternatives;
+import com.oneandone.iocunit.analyzer.annotations.TestClasses;
+import com.oneandone.iocunit.IocJUnit5Extension;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import javax.inject.Inject;
 
-@ExtendWith(JUnit5Extension.class)
+@ExtendWith(IocJUnit5Extension.class)
 @TestClasses({ AImplementation3.class, AImplementation1.class })
 @EnabledAlternatives(AImplementation3.StereotypeAlternative.class)
 public class TestAlternativeStereotype {

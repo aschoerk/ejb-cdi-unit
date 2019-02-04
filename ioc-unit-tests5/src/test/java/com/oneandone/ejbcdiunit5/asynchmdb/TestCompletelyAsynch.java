@@ -12,16 +12,16 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import com.oneandone.cdi.testanalyzer.annotations.SutClasses;
-import com.oneandone.cdi.tester.JUnit5Extension;
-import com.oneandone.cdi.tester.ejb.AsynchronousManager;
-import com.oneandone.ejbcdiunit.ejbs.StatelessCompletelyAsynchEJB;
+import com.oneandone.iocunit.analyzer.annotations.SutClasses;
+import com.oneandone.iocunit.IocJUnit5Extension;
+import com.oneandone.iocunit.ejb.AsynchronousManager;
+import com.oneandone.iocunitejb.ejbs.StatelessCompletelyAsynchEJB;
 
 
 /**
  * @author aschoerk
  */
-@ExtendWith(JUnit5Extension.class)
+@ExtendWith(IocJUnit5Extension.class)
 @SutClasses({ StatelessCompletelyAsynchEJB.class })
 public class TestCompletelyAsynch {
     @Inject

@@ -14,21 +14,21 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 
-import com.oneandone.cdi.testanalyzer.annotations.SutClasses;
-import com.oneandone.cdi.testanalyzer.annotations.TestClasses;
-import com.oneandone.cdi.tester.JUnit5Extension;
-import com.oneandone.cdi.tester.ejb.AsynchronousManager;
-import com.oneandone.ejbcdiunit.ejbs.CdiAsynchronousBean;
-import com.oneandone.ejbcdiunit.ejbs.CountingBean;
-import com.oneandone.ejbcdiunit.ejbs.SingletonTimerEJB;
-import com.oneandone.ejbcdiunit.ejbs.StatelessAsynchEJB;
-import com.oneandone.ejbcdiunit.ejbs.StatelessTimerEJB;
+import com.oneandone.iocunit.analyzer.annotations.SutClasses;
+import com.oneandone.iocunit.analyzer.annotations.TestClasses;
+import com.oneandone.iocunit.IocJUnit5Extension;
+import com.oneandone.iocunit.ejb.AsynchronousManager;
+import com.oneandone.iocunitejb.ejbs.CdiAsynchronousBean;
+import com.oneandone.iocunitejb.ejbs.CountingBean;
+import com.oneandone.iocunitejb.ejbs.SingletonTimerEJB;
+import com.oneandone.iocunitejb.ejbs.StatelessAsynchEJB;
+import com.oneandone.iocunitejb.ejbs.StatelessTimerEJB;
 import com.oneandone.ejbcdiunit5.helpers.LoggerGenerator;
 
 /**
  * @author aschoerk
  */
-@ExtendWith(JUnit5Extension.class)
+@ExtendWith(IocJUnit5Extension.class)
 @TestClasses({ LoggerGenerator.class })
 @SutClasses({ StatelessAsynchEJB.class, SingletonTimerEJB.class, StatelessTimerEJB.class, CdiAsynchronousBean.class })
 public class TestAsynch {

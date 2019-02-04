@@ -10,16 +10,16 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import com.oneandone.cdi.testanalyzer.annotations.ExcludedClasses;
-import com.oneandone.cdi.testanalyzer.annotations.SutPackages;
-import com.oneandone.cdi.tester.JUnit5Extension;
+import com.oneandone.iocunit.analyzer.annotations.ExcludedClasses;
+import com.oneandone.iocunit.analyzer.annotations.SutPackages;
+import com.oneandone.iocunit.IocJUnit5Extension;
 import com.oneandone.ejbcdiunit5.excludedclasses.pcktoinclude.ToExclude;
 import com.oneandone.ejbcdiunit5.excludedclasses.pcktoinclude.ToInclude;
 
 /**
  * @author aschoerk used to testIntercepted, if inheritence works
  */
-@ExtendWith(JUnit5Extension.class)
+@ExtendWith(IocJUnit5Extension.class)
 @SutPackages({ ToInclude.class })
 @ExcludedClasses({ ToExclude.class })
 public abstract class AbstractExcludeTest {

@@ -28,16 +28,16 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 
-import com.oneandone.cdi.testanalyzer.annotations.ExcludedClasses;
-import com.oneandone.cdi.testanalyzer.annotations.SutPackages;
-import com.oneandone.cdi.tester.JUnit5Extension;
-import com.oneandone.cdi.testanalyzer.annotations.ProducesAlternative;
-import com.oneandone.cdi.tester.contexts.ContextController;
-import com.oneandone.cdi.tester.contexts.InConversationScope;
-import com.oneandone.cdi.tester.contexts.InRequestScope;
-import com.oneandone.cdi.tester.contexts.InSessionScope;
+import com.oneandone.iocunit.analyzer.annotations.ExcludedClasses;
+import com.oneandone.iocunit.analyzer.annotations.SutPackages;
+import com.oneandone.iocunit.IocJUnit5Extension;
+import com.oneandone.iocunit.analyzer.annotations.ProducesAlternative;
+import com.oneandone.iocunit.contexts.ContextController;
+import com.oneandone.iocunit.contexts.InConversationScope;
+import com.oneandone.iocunit.contexts.InRequestScope;
+import com.oneandone.iocunit.contexts.InSessionScope;
 
-@ExtendWith(JUnit5Extension.class)
+@ExtendWith(IocJUnit5Extension.class)
 @SutPackages({ AImplementation1.class })
 @ExcludedClasses({ Scoped.class }) // cdi1.0 does not recognize @Vetoed
 public class TestCdiUnitRunner extends BaseTest {

@@ -8,19 +8,19 @@ import javax.inject.Inject;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import com.oneandone.cdi.testanalyzer.annotations.ExcludedClasses;
-import com.oneandone.cdi.testanalyzer.annotations.SutClasses;
-import com.oneandone.cdi.tester.JUnit5Extension;
-import com.oneandone.cdi.tester.ejb.AsynchronousManager;
-import com.oneandone.ejbcdiunit.ejbs.CountingBean;
-import com.oneandone.ejbcdiunit.ejbs.SingletonTimerEJB;
-import com.oneandone.ejbcdiunit.ejbs.StatelessTimerEJB;
+import com.oneandone.iocunit.analyzer.annotations.ExcludedClasses;
+import com.oneandone.iocunit.analyzer.annotations.SutClasses;
+import com.oneandone.iocunit.IocJUnit5Extension;
+import com.oneandone.iocunit.ejb.AsynchronousManager;
+import com.oneandone.iocunitejb.ejbs.CountingBean;
+import com.oneandone.iocunitejb.ejbs.SingletonTimerEJB;
+import com.oneandone.iocunitejb.ejbs.StatelessTimerEJB;
 
 /**
  * @author aschoerk
  */
-@ExtendWith(JUnit5Extension.class)
-@SutClasses({ SingletonTimerEJB.class, StatelessTimerEJB.class })
+@ExtendWith(IocJUnit5Extension.class)
+@SutClasses({StatelessTimerEJB.class })
 @ExcludedClasses({ SingletonTimerEJB.class })
 public class TestTimerExclusion {
     @Inject

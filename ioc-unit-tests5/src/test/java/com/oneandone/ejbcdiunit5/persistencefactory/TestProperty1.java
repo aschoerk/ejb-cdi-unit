@@ -19,18 +19,18 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import com.oneandone.cdi.testanalyzer.annotations.SutClasses;
-import com.oneandone.cdi.testanalyzer.annotations.TestClasses;
-import com.oneandone.cdi.tester.JUnit5Extension;
-import com.oneandone.cdi.tester.ejb.persistence.TestPersistenceFactory;
-import com.oneandone.ejbcdiunit.entities.TestEntity1;
+import com.oneandone.iocunit.analyzer.annotations.SutClasses;
+import com.oneandone.iocunit.analyzer.annotations.TestClasses;
+import com.oneandone.iocunit.IocJUnit5Extension;
+import com.oneandone.iocunit.ejb.persistence.TestPersistenceFactory;
+import com.oneandone.iocunitejb.entities.TestEntity1;
 
 /**
  * Shows how TestPersistenceFactory allows it to override hibernate-properties using system-properties.
  *
  * @author aschoerk
  */
-@ExtendWith(JUnit5Extension.class)
+@ExtendWith(IocJUnit5Extension.class)
 @TestClasses(TestPersistenceFactory.class)
 @SutClasses(TestEntity1.class)
 public class TestProperty1 extends PersistenceFactoryTestBase {
