@@ -40,8 +40,8 @@ public class CdiUnitContext implements Context {
 
     @Override
     public void close() throws NamingException {
-        properties.clear();
-        bindings.clear();
+        // do nothing when closing the default-initial-context for ioc-unit.
+        // then beanmanager can outlive several creations and deletions of InitialContext not just one
     }
 
     @Override
@@ -152,14 +152,13 @@ public class CdiUnitContext implements Context {
 
     @Override
     public void rebind(Name name, Object obj) throws NamingException {
-
+        bindings.put(name.toString(), obj);
 
     }
 
     @Override
     public void rebind(String name, Object obj) throws NamingException {
-
-
+        bindings.put(name, obj);
     }
 
     @Override

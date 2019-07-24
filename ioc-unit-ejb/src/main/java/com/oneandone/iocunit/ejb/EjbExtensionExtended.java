@@ -52,6 +52,7 @@ import javax.enterprise.util.AnnotationLiteral;
 import javax.inject.Inject;
 import javax.jms.JMSConnectionFactory;
 import javax.persistence.Entity;
+import javax.persistence.MappedSuperclass;
 import javax.persistence.PersistenceContext;
 
 import org.apache.deltaspike.core.util.metadata.AnnotationInstanceProvider;
@@ -178,7 +179,7 @@ public class EjbExtensionExtended implements Extension {
                                                  Stateful.class,
                                                  Singleton.class,
                                                  MessageDriven.class,
-                                                 Entity.class,
+                                                 Entity.class, MappedSuperclass.class,
                                                  EJB.class,
                                                  Resource.class,
                                                  PersistenceContext.class,
@@ -199,6 +200,10 @@ public class EjbExtensionExtended implements Extension {
 
         Entity entity = annotatedType.getAnnotation(Entity.class);
         if (entity != null) {
+            entityClasses.add(annotatedType.getJavaClass());
+        }
+        MappedSuperclass mappedSuperclass = annotatedType.getAnnotation(MappedSuperclass.class);
+        if (mappedSuperclass != null) {
             entityClasses.add(annotatedType.getJavaClass());
         }
 
@@ -244,6 +249,7 @@ public class EjbExtensionExtended implements Extension {
                 }
             }
             Resource resource = field.getAnnotation(Resource.class);
+            PersistenceContext persistenceContext = field.getAnnotation(PersistenceContext.class);
             if (resource != null) {  // all Resources will be set injected. The Tester must provide anything for them.
                 // this means that MessageDrivenContexts, SessionContext and JMS-Resources will be expected to be injected.
                 addInject = true;
@@ -262,17 +268,43 @@ public class EjbExtensionExtended implements Extension {
                     private static final long serialVersionUID = 1L;
                 });
                 Produces produces = field.getAnnotation(Produces.class);
+
+
+                final String typeName = field.getBaseType().getTypeName();
+                if (!typeName.startsWith("javax.jms")) {
+                    switch (typeName) {
+                        case "java.lang.String":
+                            builder.addToField(field, new ResourceQualifier.ResourceQualifierLiteral(resource.name(), resource.lookup(), resource.mappedName()));
+                            break;
+                        case "java.sql.DataSource":
+                            doResourceQualifyIfNecessary(builder, field, resource);
+                            break;
+                        case "javax.ejb.EJBContext":
+                            builder.addToField(field, new ResourceQualifier.ResourceQualifierLiteral("javax.ejb.EJBContext", "", ""));
+                            break;
+                        case "javax.transaction.UserTransaction":
+                        case "javax.ejb.SessionContext":
+                        case "javax.ejb.MessageDrivenContext":
+                        case "javax.ejb.EntityContext":
+                            // no resource-qualifier necessary, type specifies enough
+                            break;
+                        case "javax.persistence.EntityManager":
+                            if (produces == null && persistenceContext != null &&
+                                (persistenceContext.name() != null && !persistenceContext.name().isEmpty()
+                                || persistenceContext.unitName() != null && !persistenceContext.unitName().isEmpty())) {
+                                builder.addToField(field, new PersistenceContextQualifier.PersistenceContextQualifierLiteral(persistenceContext.name(), persistenceContext.unitName()));
+                            }
+                            break;
+                        default:
+                            doResourceQualifyIfNecessary(builder, field, resource);
+                            break;
+                    }
+                }
+                // cannot produce, since the container is not there. Must be injected by test-code
                 if (produces != null) {
                     builder.removeFromField(field, Produces.class);
                 }
-                if (field.getBaseType().equals(String.class)) {
 
-                    builder.addToField(field, new ResourceQualifier.ResourceQualifierLiteral(resource.name(), resource.lookup(), resource.mappedName()) {
-                        private static final long serialVersionUID = 1L;
-
-                    });
-
-                }
             }
         }
         Stateless stateless = findAnnotation(annotatedType.getJavaClass(), Stateless.class);
@@ -304,6 +336,14 @@ public class EjbExtensionExtended implements Extension {
         }
         if (modified) {
             pat.setAnnotatedType(builder.create());
+        }
+    }
+
+    private <T> void doResourceQualifyIfNecessary(final AnnotatedTypeBuilder<T> builder, final AnnotatedField<? super T> field, final Resource resource) {
+        if (field.getAnnotation(Produces.class) == null) {
+            if(resource != null && !(resource.name().isEmpty() && resource.mappedName().isEmpty() && resource.lookup().isEmpty())) {
+                builder.addToField(field, new ResourceQualifier.ResourceQualifierLiteral(resource.name(), resource.lookup(), resource.mappedName()));
+            }
         }
     }
 

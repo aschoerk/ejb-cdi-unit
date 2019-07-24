@@ -2,8 +2,9 @@ package com.oneandone.iocunit.ejb;
 
 import java.io.IOException;
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
 import java.net.URL;
-import java.security.Principal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -16,7 +17,9 @@ import javax.ejb.MessageDriven;
 import javax.ejb.SessionContext;
 import javax.ejb.Startup;
 import javax.enterprise.context.ApplicationScoped;
+import javax.enterprise.inject.Produces;
 import javax.persistence.Entity;
+import javax.persistence.MappedSuperclass;
 import javax.persistence.PersistenceContext;
 import javax.transaction.UserTransaction;
 
@@ -24,6 +27,10 @@ import org.jboss.weld.transaction.spi.TransactionServices;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.oneandone.cdi.weldstarter.CreationalContexts;
+import com.oneandone.cdi.weldstarter.WeldSetup;
+import com.oneandone.cdi.weldstarter.WeldSetupClass;
+import com.oneandone.cdi.weldstarter.spi.TestExtensionService;
 import com.oneandone.cdi.weldstarter.spi.WeldStarter;
 import com.oneandone.iocunit.ejb.jms.JmsMocksFactory;
 import com.oneandone.iocunit.ejb.jms.JmsProducers;
@@ -31,10 +38,6 @@ import com.oneandone.iocunit.ejb.jms.JmsSingletons;
 import com.oneandone.iocunit.ejb.persistence.SimulatedEntityTransaction;
 import com.oneandone.iocunit.ejb.persistence.SimulatedTransactionManager;
 import com.oneandone.iocunit.ejb.resourcesimulators.SimulatedUserTransaction;
-import com.oneandone.cdi.weldstarter.CreationalContexts;
-import com.oneandone.cdi.weldstarter.WeldSetup;
-import com.oneandone.cdi.weldstarter.WeldSetupClass;
-import com.oneandone.cdi.weldstarter.spi.TestExtensionService;
 
 /**
  * @author aschoerk
@@ -85,6 +88,7 @@ public class EjbTestExtensionService implements TestExtensionService {
     @Override
     public boolean candidateToStart(Class<?> c) {
         if (c.getAnnotation(Entity.class) != null
+                || c.getAnnotation(MappedSuperclass.class) != null
                 || c.getAnnotation(MessageDriven.class) != null
                 || c.getAnnotation(Startup.class) != null) {
             ejbTestExtensionServiceData.get().candidatesToStart.add(c);
@@ -135,7 +139,8 @@ public class EjbTestExtensionService implements TestExtensionService {
         for (Class<?> c : ejbTestExtensionServiceData.get().candidatesToStart) {
             if (!ejbTestExtensionServiceData.get().excludedClasses.contains(c))
                 if (!weldSetup.getBeanClasses().contains(c.getName())) {
-                    logger.warn("Entity, Mdb or Startup Candidate: {} not started", c.getSimpleName());
+                    logger.warn("Entity, Mdb or Startup candidate: {} found "
+                                + " while scanning availables, but not in testconfiguration included.", c.getSimpleName());
                 }
         }
         ejbTestExtensionServiceData.get().candidatesToStart.clear(); // show only once
@@ -172,5 +177,51 @@ public class EjbTestExtensionService implements TestExtensionService {
         return Arrays.asList(
                 SessionContext.class,
                 UserTransaction.class);
+    }
+
+    @Override
+    public void addQualifiers(Field f, Collection<Annotation> qualifiers)   {
+        Resource resource = f.getAnnotation(Resource.class);
+        if (resource != null) {
+            ArrayList<Annotation> annotations = new ArrayList<Annotation>();
+            String typeName = f.getType().getName();
+            try {
+                Class literal = Class.forName("com.oneandone.iocunit.ejb.ResourceQualifier$ResourceQualifierLiteral");
+                Constructor[] cs = literal.getConstructors();
+
+                if(f.getAnnotation(Resource.class) != null) {
+                    switch (typeName) {
+                        case "java.lang.String":
+                            qualifiers.add((Annotation) (cs[0].newInstance(resource.name(), resource.lookup(), resource.mappedName())));
+                            break;
+                        case "java.sql.DataSource":
+                            doesResourceQualifyIfNecessary(f, qualifiers, resource, cs);
+                            break;
+                        case "javax.ejb.EJBContext":
+                            qualifiers.add((Annotation) (cs[0].newInstance("javax.ejb.EJBContext", "", "")));
+                            break;
+                        case "javax.transaction.UserTransaction":
+                        case "javax.ejb.SessionContext":
+                        case "javax.ejb.MessageDrivenContext":
+                        case "javax.ejb.EntityContext":
+                            // no resource-qualifier necessary, type specifies enough
+                            break;
+                        default:
+                            doesResourceQualifyIfNecessary(f, qualifiers, resource, cs);
+                            break;
+                    }
+                }
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
+
+    private void doesResourceQualifyIfNecessary(final Field f, final Collection<Annotation> qualifiers, final Resource resource, final Constructor[] cs) throws InstantiationException, IllegalAccessException, java.lang.reflect.InvocationTargetException {
+        if (f.getAnnotation(Produces.class) == null) {
+            if(resource != null && !(resource.name().isEmpty() && resource.mappedName().isEmpty() && resource.lookup().isEmpty())) {
+                qualifiers.add((Annotation) (cs[0].newInstance(resource.name(), resource.lookup(), resource.mappedName())));
+            }
+        }
     }
 }
