@@ -245,7 +245,6 @@ public abstract class PersistenceFactoryTestBase {
         }
     }
 
-
     @Test
     public void canQueryPersistedChangedEntityInTransaction() throws Exception {
         try (TestTransaction resource = persistenceFactory.transaction(REQUIRED)) {

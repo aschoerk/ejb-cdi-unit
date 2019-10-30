@@ -1,21 +1,33 @@
 package net.oneandone.ejbcdiunit.purecdi;
 
-import org.jboss.weld.bootstrap.api.CDI11Bootstrap;
-import org.jboss.weld.bootstrap.api.ServiceRegistry;
-import org.jboss.weld.bootstrap.api.helpers.SimpleServiceRegistry;
-import org.jboss.weld.bootstrap.spi.*;
-import org.jboss.weld.ejb.spi.EjbDescriptor;
-import org.jboss.weld.environment.se.Weld;
-import org.jboss.weld.environment.se.WeldContainer;
-import org.jboss.weld.resources.spi.ResourceLoader;
-
-import javax.enterprise.inject.spi.DeploymentException;
-import javax.enterprise.inject.spi.Extension;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+
+import javax.enterprise.inject.spi.DeploymentException;
+import javax.enterprise.inject.spi.Extension;
+
+import org.jboss.weld.bootstrap.WeldBootstrap;
+import org.jboss.weld.bootstrap.api.CDI11Bootstrap;
+import org.jboss.weld.bootstrap.api.ServiceRegistry;
+import org.jboss.weld.bootstrap.api.helpers.SimpleServiceRegistry;
+import org.jboss.weld.bootstrap.spi.BeanDeploymentArchive;
+import org.jboss.weld.bootstrap.spi.BeanDiscoveryMode;
+import org.jboss.weld.bootstrap.spi.BeansXml;
+import org.jboss.weld.bootstrap.spi.CDI11Deployment;
+import org.jboss.weld.bootstrap.spi.Deployment;
+import org.jboss.weld.bootstrap.spi.Metadata;
+import org.jboss.weld.bootstrap.spi.Scanning;
+import org.jboss.weld.ejb.spi.EjbDescriptor;
+import org.jboss.weld.environment.se.Weld;
+import org.jboss.weld.environment.se.WeldContainer;
+import org.jboss.weld.resources.spi.ResourceLoader;
+import org.jboss.weld.resources.spi.ScheduledExecutorServiceFactory;
+import org.jboss.weld.util.reflection.Formats;
 
 public class WeldStarter {
 
@@ -37,8 +49,22 @@ public class WeldStarter {
 
             @Override
             protected Deployment createDeployment(final ResourceLoader resourceLoader, final CDI11Bootstrap bootstrap) {
+                String version = Formats.version(WeldBootstrap.class.getPackage());
 
                 final ServiceRegistry services = new SimpleServiceRegistry();
+                if (version.startsWith("2")) {
+                    services.add(ScheduledExecutorServiceFactory.class, new ScheduledExecutorServiceFactory() {
+                        @Override
+                        public ScheduledExecutorService get() {
+                            return new ScheduledThreadPoolExecutor(10);
+                        }
+
+                        @Override
+                        public void cleanup() {
+
+                        }
+                    });
+                }
 
                 final BeanDeploymentArchive oneDeploymentArchive = createOneDeploymentArchive(weldSetup, services);
 
@@ -165,8 +191,9 @@ public class WeldStarter {
     }
 
     public void tearDown() {
-        if (container != null)
-            container .close();
+        if(container != null) {
+            container.close();
+        }
         container = null;
     }
 }

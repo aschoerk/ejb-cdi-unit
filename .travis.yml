@@ -2,7 +2,7 @@ sudo: false
 language: java
 
 jdk:
-- oraclejdk8
+- openjdk8
 # - openjdk10
 
 # cache local Maven repo: https://docs.travis-ci.com/user/caching/
@@ -20,5 +20,5 @@ env:
 - PROFILES=arquillian
 - PROFILES=base,weld2.3,junit5
 
-script: "mvn clean install -P${PROFILES}"
+script: "mvn -B clean install -P${PROFILES}"
 

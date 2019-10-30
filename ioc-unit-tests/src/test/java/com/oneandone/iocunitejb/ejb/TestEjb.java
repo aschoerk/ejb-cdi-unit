@@ -14,7 +14,6 @@ import javax.transaction.HeuristicMixedException;
 import javax.transaction.HeuristicRollbackException;
 import javax.transaction.NotSupportedException;
 import javax.transaction.RollbackException;
-import javax.transaction.Status;
 import javax.transaction.SystemException;
 
 import org.junit.AfterClass;
@@ -25,13 +24,14 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
+import com.oneandone.iocunit.IocUnitRule;
 import com.oneandone.iocunit.analyzer.InitialConfiguration;
 import com.oneandone.iocunit.analyzer.annotations.TestClasses;
-import com.oneandone.iocunit.IocUnitRule;
 import com.oneandone.iocunit.ejb.EjbJarClasspath;
 import com.oneandone.iocunit.ejb.SessionContextFactory;
 import com.oneandone.iocunit.ejb.persistence.SinglePersistenceFactory;
 import com.oneandone.iocunit.ejb.persistence.TestTransaction;
+import com.oneandone.iocunitejb.TestRunnerIocUnit;
 import com.oneandone.iocunitejb.ejbs.CDIClass;
 import com.oneandone.iocunitejb.ejbs.MdbEjbInfoSingleton;
 import com.oneandone.iocunitejb.ejbs.OuterClass;
@@ -41,6 +41,8 @@ import com.oneandone.iocunitejb.ejbs.SingletonTimerEJB;
 import com.oneandone.iocunitejb.ejbs.StatelessBeanManagedTrasEJB;
 import com.oneandone.iocunitejb.ejbs.StatelessChildEJB;
 import com.oneandone.iocunitejb.ejbs.StatelessEJB;
+import com.oneandone.iocunitejb.ejbs.TestRunnerIntf;
+import com.oneandone.iocunitejb.ejbs.TransactionalApplicationScoped;
 import com.oneandone.iocunitejb.ejbs.appexc.TestBaseClass;
 import com.oneandone.iocunitejb.entities.TestEntity1;
 import com.oneandone.iocunitejb.helpers.LoggerGenerator;
@@ -51,7 +53,8 @@ import com.oneandone.iocunitejb.testbases.TestEntity1Saver;
  * @author aschoerk
  */
 @RunWith(JUnit4.class)
-@TestClasses({ StatelessEJB.class, SingletonEJB.class,
+@TestClasses({ StatelessEJB.class, SingletonEJB.class, TestRunnerIocUnit.class,
+        TransactionalApplicationScoped.class,
         TestEjb.TestDbPersistenceFactory.class, SessionContextFactory.class,
         StatelessBeanManagedTrasEJB.class, StatelessChildEJB.class,
         QMdbEjb.class, MdbEjbInfoSingleton.class, LoggerGenerator.class, CDIClass.class, OuterClass.class })
@@ -59,7 +62,7 @@ import com.oneandone.iocunitejb.testbases.TestEntity1Saver;
 public class TestEjb extends EJBTransactionTestBase {
 
     @Inject
-    SinglePersistenceFactory persistenceFactory;
+    TestRunnerIntf testRunner;
 
     @AfterClass
     public static void tearDownProfiler() throws InterruptedException {
@@ -122,29 +125,12 @@ public class TestEjb extends EJBTransactionTestBase {
 
     @Override
     public void runTestInRolledBackTransaction(TestEntity1Saver saver, int num, boolean exceptionExpected) throws Exception {
-        try (TestTransaction resource1 = persistenceFactory.transaction(TransactionAttributeType.REQUIRES_NEW)) {
-            TestEntity1 testEntity1 = new TestEntity1();
-            boolean exceptionHappened = false;
-            try {
-                saver.save(testEntity1);
-            } catch (RuntimeException r) {
-                exceptionHappened = true;
-                if (resource1.getStatus() == Status.STATUS_MARKED_ROLLBACK) {
-                    resource1.rollback();
-                }
-                if (resource1.getStatus() == Status.STATUS_NO_TRANSACTION) {
-                    resource1.begin();
-                }
-            }
-            Assert.assertThat(exceptionHappened, is(exceptionExpected));
-            entityManager.persist(new TestEntity1());
-            entityManager.flush();
-            Number res = entityManager.createQuery("select count(e) from TestEntity1 e", Number.class).getSingleResult();
-            Assert.assertThat(res.intValue(), is(num));
-            resource1.setRollbackOnly();
-        } catch (RollbackException rbe) {
-            // ignore, wanted to roll it back!!!
-        }
+        testRunner.runTestInRolledBackTransaction(saver, num, exceptionExpected);
+    }
+
+    @Override
+    public void runTestWithoutTransaction(TestEntity1Saver saver, int num, boolean exceptionExpected) throws Exception {
+        testRunner.runTestWithoutTransaction(saver, num, exceptionExpected);
     }
 
     @Override
@@ -155,8 +141,20 @@ public class TestEjb extends EJBTransactionTestBase {
 
     @Override
     @Test
+    public void requiresNewMethodWorksNonEjb() throws Exception {
+        super.requiresNewMethodWorksNonEjb();
+    }
+
+    @Override
+    @Test
     public void defaultMethodWorks() throws Exception {
         super.defaultMethodWorks();
+    }
+
+    @Override
+    @Test
+    public void defaultMethodWorksNonEjb() throws Exception {
+        super.defaultMethodWorksNonEjb();
     }
 
     @Override
@@ -167,8 +165,20 @@ public class TestEjb extends EJBTransactionTestBase {
 
     @Override
     @Test
+    public void requiredMethodWorksNonEjb() throws Exception {
+        super.requiredMethodWorksNonEjb();
+    }
+
+    @Override
+    @Test
     public void indirectSaveNewInRequired() throws Exception {
         super.indirectSaveNewInRequired();
+    }
+
+    @Override
+    @Test
+    public void indirectSaveNewInRequiredNonEjb() throws Exception {
+        super.indirectSaveNewInRequiredNonEjb();
     }
 
     @Override
@@ -179,8 +189,20 @@ public class TestEjb extends EJBTransactionTestBase {
 
     @Override
     @Test
+    public void indirectSaveNewInRequiredThrowExceptionNonEjb() throws Exception {
+        super.indirectSaveNewInRequiredThrowExceptionNonEjb();
+    }
+
+    @Override
+    @Test
     public void indirectSaveRequiredInRequired() throws Exception {
         super.indirectSaveRequiredInRequired();
+    }
+
+    @Override
+    @Test
+    public void indirectSaveRequiredInRequiredNonEjb() throws Exception {
+        super.indirectSaveRequiredInRequiredNonEjb();
     }
 
     @Override
@@ -191,8 +213,20 @@ public class TestEjb extends EJBTransactionTestBase {
 
     @Override
     @Test
+    public void indirectSaveRequiredInRequiredThrowExceptionNonEjb() throws Exception {
+        super.indirectSaveRequiredInRequiredThrowExceptionNonEjb();
+    }
+
+    @Override
+    @Test
     public void indirectSaveNewInNewTra() throws Exception {
         super.indirectSaveNewInNewTra();
+    }
+
+    @Override
+    @Test
+    public void indirectSaveNewInNewTraNonEjb() throws Exception {
+        super.indirectSaveNewInNewTraNonEjb();
     }
 
     @Override
@@ -203,8 +237,20 @@ public class TestEjb extends EJBTransactionTestBase {
 
     @Override
     @Test
+    public void indirectSaveRequiredInNewTraThrowNonEjb() throws Exception {
+        super.indirectSaveRequiredInNewTraThrowNonEjb();
+    }
+
+    @Override
+    @Test
     public void indirectSaveNewInNewTraThrow() throws Exception {
         super.indirectSaveNewInNewTraThrow();
+    }
+
+    @Override
+    @Test
+    public void indirectSaveNewInNewTraThrowNonEjb() throws Exception {
+        super.indirectSaveNewInNewTraThrowNonEjb();
     }
 
     @Override
@@ -215,14 +261,31 @@ public class TestEjb extends EJBTransactionTestBase {
 
     @Override
     @Test
+    public void indirectSaveRequiredInNewTraNonEjb() throws Exception {
+        super.indirectSaveRequiredInNewTraNonEjb();
+    }
+
+    @Override
+    @Test
     public void indirectSaveRequiredPlusNewInNewTra() throws Exception {
         super.indirectSaveRequiredPlusNewInNewTra();
     }
 
     @Override
     @Test
+    public void indirectSaveRequiredPlusNewInNewTraNonEjb() throws Exception {
+        super.indirectSaveRequiredPlusNewInNewTraNonEjb();
+    }
+
+    @Override
+    @Test
     public void indirectSaveRequiredPlusNewInNewTraButDirectCallAndThrow() throws Exception {
         super.indirectSaveRequiredPlusNewInNewTraButDirectCallAndThrow();
+    }
+    @Override
+    @Test
+    public void indirectSaveRequiredPlusNewInNewTraButDirectCallAndThrowNonEjb() throws Exception {
+        super.indirectSaveRequiredPlusNewInNewTraButDirectCallAndThrowNonEjb();
     }
 
     @Override
@@ -233,8 +296,20 @@ public class TestEjb extends EJBTransactionTestBase {
 
     @Override
     @Test
+    public void indirectSaveRequiresNewLocalAsBusinessObjectNonEjb() throws Exception {
+        super.indirectSaveRequiresNewLocalAsBusinessObjectNonEjb();
+    }
+
+    @Override
+    @Test
     public void indirectSaveRequiresNewLocalAsBusinessObjectAndThrow() throws Exception {
         super.indirectSaveRequiresNewLocalAsBusinessObjectAndThrow();
+    }
+
+    @Override
+    @Test
+    public void indirectSaveRequiresNewLocalAsBusinessObjectAndThrowNonEjb() throws Exception {
+        super.indirectSaveRequiresNewLocalAsBusinessObjectAndThrowNonEjb();
     }
 
     @Override
