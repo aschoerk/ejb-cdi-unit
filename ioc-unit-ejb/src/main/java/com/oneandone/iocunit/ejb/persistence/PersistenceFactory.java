@@ -1,16 +1,19 @@
 package com.oneandone.iocunit.ejb.persistence;
 
-import java.util.Collections;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Stack;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import javax.ejb.TransactionAttributeType;
 import javax.enterprise.context.ApplicationScoped;
+import javax.inject.Inject;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.TransactionRequiredException;
@@ -49,10 +52,14 @@ public abstract class PersistenceFactory {
     private EntityManagerFactory emf = null;
     private SimulatedTransactionManager transactionManager = new SimulatedTransactionManager();
     private ConcurrentLinkedQueue<Stack<EntityManager>> threadlocalStacks = new ConcurrentLinkedQueue<>();
+    private AtomicBoolean firstDatasourceCreated = new AtomicBoolean(false);
 
     protected Provider getRecommendedProvider() {
         return Provider.HIBERNATE;
     }
+
+    @Inject
+    private PersistenceFactoryResources persistenceFactoryResources;
 
     /**
      * allow to reset between Tests.
@@ -61,7 +68,7 @@ public abstract class PersistenceFactory {
         PERSISTENCE_UNIT_NAMES.clear();
     }
 
-    protected abstract String getPersistenceUnitName();
+    public abstract String getPersistenceUnitName();
 
     private ThreadLocal<Stack<EntityManager>> getEmStackThreadLocal() {
         return emStackThreadLocal;
@@ -74,6 +81,9 @@ public abstract class PersistenceFactory {
     private void setEmf(EntityManagerFactory emfP) {
         this.emf = emfP;
     }
+
+
+    abstract protected EntityManagerFactory createEntityManagerFactory();
 
     /**
      * prepare EntityManagerFactory
@@ -252,27 +262,56 @@ public abstract class PersistenceFactory {
      *
      * @return a jdbc-Datasource using the same driver url user and password as the entityManager
      */
-    public DataSource createDataSource() {
+    protected DataSource createDataSource() {
         Map props = emf.getProperties();
         DataSource emfDatasource = (DataSource) props.get("hibernate.connection.datasource");
         if (emfDatasource != null) {
-            return emfDatasource;
+            return checkAndDoInFirstConnection(emfDatasource);
         } else {
-            BasicDataSource newDataSource = new BasicDataSource();
+            BasicDataSource newDataSource = createBasicDataSource();
             newDataSource.setDriverClassName((String) props.get("javax.persistence.jdbc.driver"));
             newDataSource.setUrl((String) props.get("javax.persistence.jdbc.url"));
-            return newDataSource;
+            return checkAndDoInFirstConnection(newDataSource);
         }
     }
 
-    public DataSource produceDataSource() {
-        return new DataSourceDelegate(this);
+    protected BasicDataSource createBasicDataSource() {
+        BasicDataSource result = new BasicDataSource() {
+
+            @Override
+            public Connection getConnection(final String user, final String pass) throws SQLException {
+                return getAndPossiblyWrapConnection();
+            }
+
+            @Override
+            public Connection getConnection() throws SQLException {
+                return getAndPossiblyWrapConnection();
+            }
+
+            private Connection getAndPossiblyWrapConnection() throws SQLException {
+                Connection connection = super.getConnection();
+                if (connection instanceof ConnectionDelegate)
+                    return connection;
+                else {
+                    return new ConnectionDelegate(connection, getJdbcSqlConverterIfThereIsOne());
+                }
+            }
+        };
+        result.setMaxIdle(10);
+        result.setMinIdle(2);
+        result.setMaxTotal(100);
+        return result;
     }
 
-    protected EntityManagerFactory createEntityManagerFactory() {
-        PersistenceProvider actProvider = getPersistenceProvider();
-        return actProvider.createEntityManagerFactory(getPersistenceUnitName(), Collections.EMPTY_MAP);
+    public DataSource produceDataSource() {
+        JdbcSqlConverter jdbcSqlConverter = getJdbcSqlConverterIfThereIsOne();
+        return checkAndDoInFirstConnection(new DataSourceDelegate(this, jdbcSqlConverter));
     }
+
+    JdbcSqlConverter getJdbcSqlConverterIfThereIsOne() {
+        return persistenceFactoryResources.getJdbcSqlConverterIfThereIsOne();
+    }
+
 
     protected PersistenceProvider getPersistenceProvider() {
         List<PersistenceProvider> pProviders = PersistenceProviderResolverHolder.getPersistenceProviderResolver().getPersistenceProviders();
@@ -288,6 +327,18 @@ public abstract class PersistenceFactory {
             }
         }
         return actProvider;
+    }
+
+    protected DataSource checkAndDoInFirstConnection(DataSource ds) {
+        if (this.firstDatasourceCreated.compareAndSet(false, true)) {
+            return doInFirstConnection(ds);
+        } else {
+            return ds;
+        }
+    }
+
+    public DataSource doInFirstConnection(DataSource ds) {
+        return ds;
     }
 
 

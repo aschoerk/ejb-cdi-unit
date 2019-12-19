@@ -4,15 +4,15 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Produces;
 import javax.sql.DataSource;
 
-import com.oneandone.iocunit.ejb.persistence.PersistenceFactory;
+import com.oneandone.iocunit.jpa.XmlAwarePersistenceFactory;
 
 /**
  * @author aschoerk
  */
 @ApplicationScoped
-public class J2eeSimTest1Factory extends PersistenceFactory {
+public class J2eeSimTest1Factory extends XmlAwarePersistenceFactory {
     @Override
-    protected String getPersistenceUnitName() {
+    public String getPersistenceUnitName() {
         return "j2eeSimDS1Test";
     }
 

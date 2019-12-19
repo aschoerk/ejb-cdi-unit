@@ -5,6 +5,8 @@ import java.util.Map;
 import javax.enterprise.context.ApplicationScoped;
 import javax.naming.NamingException;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.SecurityContext;
+import javax.ws.rs.ext.Provider;
 
 import org.jboss.resteasy.core.Dispatcher;
 import org.jboss.resteasy.mock.MockDispatcherFactory;
@@ -17,6 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.oneandone.cdi.weldstarter.CreationalContexts;
+import com.oneandone.cdi.weldstarter.WeldSetupClass;
 
 /**
  * @author aschoerk
@@ -34,12 +37,32 @@ public class DispatcherDelegate implements Dispatcher {
     Logger logger = LoggerFactory.getLogger("RestEasy MockDispatcher Delegate");
     boolean setupDone = false;
 
+    static ThreadLocal<Object> securityContextThreadLocal = new ThreadLocal<>();
+
+    private void addAnnotationDefinedJaxRSClasses() {
+        Boolean onlyAnnotationDefined = RestEasyTestExtensionServices.onlyAnnotationDefined.get();
+        if(onlyAnnotationDefined != null && onlyAnnotationDefined) {
+            jaxRsTestExtension.getProviders().clear();
+            jaxRsTestExtension.getResourceClasses().clear();
+        }
+        for (Class c : RestEasyTestExtensionServices.perAnnotationDefinedJaxRSClasses.get()) {
+            if(JaxRsRestEasyTestExtension.annotationPresent(c, Provider.class)) {
+                jaxRsTestExtension.getProviders().add(c);
+            }
+            else {
+                jaxRsTestExtension.getResourceClasses().add(c);
+            }
+        }
+    }
+
+
     public void setUp() {
         if(setupDone) {
             return;
         }
         setupDone = true;
         delegate = MockDispatcherFactory.createDispatcher();
+        addAnnotationDefinedJaxRSClasses();
         try {
             creationalContexts = new CreationalContexts();
             for (Class<?> clazz : jaxRsTestExtension.getResourceClasses()) {
@@ -53,7 +76,21 @@ public class DispatcherDelegate implements Dispatcher {
         }
         ResteasyProviderFactory provfactory = delegate.getProviderFactory();
         for (Class<?> clazz : jaxRsTestExtension.getProviders()) {
-            provfactory.register(clazz);
+            logger.info("Creating rest-provider {}", clazz.getName());
+            Object res = creationalContexts.create(clazz, ApplicationScoped.class);
+            provfactory.register(res);
+        }
+        try {
+            Object securityContext = creationalContexts.create(SecurityContext.class, ApplicationScoped.class);
+            ResteasyProviderFactory.getContextDataMap().put(SecurityContext.class, securityContext);
+            securityContextThreadLocal.set(securityContext);
+        } catch (Exception e) {
+            if(e.getClass().getName().contains("AmbiguousResolutionException")) {
+                throw new RuntimeException(e);
+            }
+            else {
+                logger.info("No Test SecurityContext found");
+            }
         }
 
         checkJackson(provfactory);
@@ -61,24 +98,29 @@ public class DispatcherDelegate implements Dispatcher {
 
     private void checkJackson(final ResteasyProviderFactory provfactory) {
 
-        boolean jackson1Found = false;
-        boolean jackson2Found = false;
-        for (Class c: provfactory.getClasses()) {
-            if(c.getName().equals("org.jboss.resteasy.plugins.providers.jackson.ResteasyJackson2Provider")) {
-                jackson2Found = true;
+        try {
+            boolean jackson1Found = false;
+            boolean jackson2Found = false;
+            for (Class c : provfactory.getClasses()) {
+                if(c.getName().equals("org.jboss.resteasy.plugins.providers.jackson.ResteasyJackson2Provider")) {
+                    jackson2Found = true;
+                }
+                else if(c.getName().equals("org.jboss.resteasy.plugins.providers.jackson.ResteasyJacksonProvider")) {
+                    jackson1Found = true;
+                }
             }
-            else if(c.getName().equals("org.jboss.resteasy.plugins.providers.jackson.ResteasyJacksonProvider")) {
-                jackson1Found = true;
+            if(jackson1Found) {
+                logger.info("ResteasyJacksonProvider found");
             }
-        }
-        if(jackson1Found) {
-            logger.info("ResteasyJacksonProvider found");
-        }
-        if(jackson2Found) {
-            logger.info("ResteasyJackson2Provider found");
-        }
-        if(jackson1Found && jackson2Found) {
-            logger.warn("Both ResteasyJacksonProvider and ResteasyJackson2Provider found!");
+            if(jackson2Found) {
+                logger.info("ResteasyJackson2Provider found");
+            }
+            if(jackson1Found && jackson2Found) {
+                logger.warn("Both ResteasyJacksonProvider and ResteasyJackson2Provider found!");
+            }
+        } catch (NoSuchMethodError e) {
+            if (!WeldSetupClass.isWeld1())
+                throw e;
         }
 
     }

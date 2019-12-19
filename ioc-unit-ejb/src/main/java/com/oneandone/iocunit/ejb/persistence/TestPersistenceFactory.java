@@ -34,15 +34,13 @@ import javax.persistence.spi.PersistenceUnitTransactionType;
 import javax.sql.DataSource;
 
 import org.apache.commons.dbcp2.BasicDataSource;
-import org.eclipse.persistence.internal.jpa.deployment.SEPersistenceUnitInfo;
-import org.hibernate.jpa.boot.internal.EntityManagerFactoryBuilderImpl;
-import org.hibernate.jpa.boot.internal.PersistenceUnitInfoDescriptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.oneandone.iocunit.analyzer.annotations.TestClasses;
 import com.oneandone.iocunit.ejb.EjbExtensionExtended;
 import com.oneandone.iocunit.ejb.SessionContextFactory;
+import com.oneandone.iocunit.jpa.XmlAwarePersistenceFactory;
 
 /**
  * This Persistencefactory should allow to create tests with in an h2 database very fast.
@@ -60,9 +58,10 @@ import com.oneandone.iocunit.ejb.SessionContextFactory;
  *
  * @author aschoerk
  */
+@Deprecated
 @ApplicationScoped
 @TestClasses({ SessionContextFactory.class })
-public class TestPersistenceFactory extends PersistenceFactory {
+public class TestPersistenceFactory extends XmlAwarePersistenceFactory {
 
     public static Set<String> notFoundPersistenceUnits = new HashSet<>();
     static Logger logger = LoggerFactory.getLogger("TestPersistenceFactory");
@@ -71,7 +70,7 @@ public class TestPersistenceFactory extends PersistenceFactory {
     HashMap<String, Object> properties = new HashMap<>();
 
     @Override
-    protected String getPersistenceUnitName() {
+    public String getPersistenceUnitName() {
         if (getFilenamePrefix() == null)
             return "test";
         else
@@ -251,16 +250,12 @@ public class TestPersistenceFactory extends PersistenceFactory {
             // possibly override properties using system properties
             overwritePersistenceProperties(System.getProperties());
             final PersistenceUnitInfo persistenceUnitInfo = getHibernatePersistenceUnitInfo(properties);
-            try {
-                result = new EntityManagerFactoryBuilderImpl(new PersistenceUnitInfoDescriptor(persistenceUnitInfo), properties).build();
-            } catch (Throwable thw) {
-                throw new RuntimeException(thw);
-            }
-
+            result = HibernateDependent.createFromPersistenceUnit(persistenceUnitInfo, properties);
         } else {
             initEclipseLinkProperties(properties);
             overwritePersistenceProperties(System.getProperties());
-            properties.put("eclipselink.se-puinfo", new SEPersistenceUnitInfo() {
+            EclipseLinkDependent.addPersistenceUnitInfoToProperties(properties, new PersistenceUnitInfo() {
+                DataSource nonJtaDataSource = null;
                 @Override
                 public String getPersistenceUnitName() {
                     return "TestPersistenceUnit";
@@ -311,6 +306,50 @@ public class TestPersistenceFactory extends PersistenceFactory {
                     return Thread.currentThread().getContextClassLoader();
                 }
 
+                @Override
+                public String getPersistenceProviderClassName() {
+                    throw new RuntimeException("not implemented");
+                }
+
+                @Override
+                public PersistenceUnitTransactionType getTransactionType() {
+                    throw new RuntimeException("not implemented");
+                }
+
+                @Override
+                public List<String> getMappingFileNames() {
+                    throw new RuntimeException("not implemented");
+                }
+
+                @Override
+                public SharedCacheMode getSharedCacheMode() {
+                    throw new RuntimeException("not implemented");
+                }
+
+                @Override
+                public ValidationMode getValidationMode() {
+                    throw new RuntimeException("not implemented");
+                }
+
+                @Override
+                public Properties getProperties() {
+                    throw new RuntimeException("not implemented");
+                }
+
+                @Override
+                public String getPersistenceXMLSchemaVersion() {
+                    throw new RuntimeException("not implemented");
+                }
+
+                @Override
+                public void addTransformer(final ClassTransformer transformer) {
+                    throw new RuntimeException("not implemented");
+                }
+
+                @Override
+                public ClassLoader getNewTempClassLoader() {
+                    throw new RuntimeException("not implemented");
+                }
             });
             result = persistenceProvider.createEntityManagerFactory(getPersistenceUnitName(), properties);
         }
@@ -456,12 +495,7 @@ public class TestPersistenceFactory extends PersistenceFactory {
     @Override
     public DataSource createDataSource() {
         if (properties.size() > 0) {
-            BasicDataSource bds = new BasicDataSource() {
-                @Override
-                public Connection getConnection(final String user, final String pass) throws SQLException {
-                    return super.getConnection();
-                }
-            };
+            BasicDataSource bds = createBasicDataSource();
             bds.setDriverClassName(getProperty(properties, "javax.persistence.jdbc.driver", "hibernate.connection.driverclass", "org.h2.Driver"));
             bds.setUrl(getProperty(properties, "javax.persistence.jdbc.url", "hibernate.connection.url", "jdbc:h2:mem:test;MODE=MySQL;DB_CLOSE_ON_EXIT=TRUE;DB_CLOSE_DELAY=0;LOCK_MODE=0;LOCK_TIMEOUT=10000"));
             bds.setUsername(getProperty(properties, "javax.persistence.jdbc.user", "hibernate.connection.username", "sa"));

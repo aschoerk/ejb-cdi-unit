@@ -1,9 +1,23 @@
 # ioc-unit-resteasy
 
+Using MockDispatcherFactory started in a weldcontainer makes it possible to test almost all details 
+of a jaxrs-application.
+
+* Resource
+* all Types of Providers
+* Authorization aspects (roles)
+
+## Principle
+
+* By using @JaxRsClasses at the Testclass, Resources can be made explicite. They might also be recognized by @Path but that does not work if the annotation
+is set at an interface or superclass. Provider classes are recognized by @Provider.
+* Use @TestAuth at the method to define the username and the roles the user might have. If that annotation is set, the
+authorization constraints are enforced.
+
 ## Pure Resteasy
 
 Inclusion of this module as test-dependency allows it to include **jaxrs** RestResources and ExceptionMappers in JUnit-Tests.
-To do so the must get included as SutClasses so that they are explicitly recognized by the resteasy MockDispatcherFactory.
+To do so the JaxRS-Classes must either get included as SutClasses or explicitly using the Annotation JaxRSClasses (version >= 20.0.19) so that they are explicitly recognized by the resteasy MockDispatcherFactory.
 
 ### example
 
@@ -11,7 +25,7 @@ To do so the must get included as SutClasses so that they are explicitly recogni
      * @author aschoerk
      */
     @RunWith(IocUnitRunner.class)
-    @SutClasses({ExampleErrorMapper.class, ExampleResource.class})
+    @JaxRSResources({ExampleErrorMapper.class,ExampleResource.class})
     public class PureResteasyTest {
         @Inject
         Dispatcher dispatcher;

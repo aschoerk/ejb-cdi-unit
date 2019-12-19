@@ -6,6 +6,7 @@ import static org.junit.Assert.assertThat;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.ejb.EJBException;
 import javax.ejb.TransactionAttributeType;
 import javax.inject.Inject;
 import javax.persistence.EntityManager;
@@ -16,11 +17,14 @@ import javax.transaction.RollbackException;
 import javax.transaction.SystemException;
 import javax.transaction.UserTransaction;
 
+import org.hibernate.validator.internal.cdi.interceptor.ValidationInterceptor;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import com.oneandone.iocunit.IocUnitRunner;
+import com.oneandone.iocunit.analyzer.annotations.SutClasses;
 import com.oneandone.iocunit.analyzer.annotations.SutPackages;
+import com.oneandone.iocunit.analyzer.annotations.TestClasses;
 import com.oneandone.iocunit.ejb.persistence.PersistenceFactory;
 import com.oneandone.iocunit.ejb.persistence.TestClosure;
 import com.oneandone.iocunit.ejb.persistence.TestTransactionException;
@@ -29,8 +33,9 @@ import com.oneandone.iocunit.ejb.persistence.TestTransactionException;
  * @author aschoerk
  */
 @RunWith(IocUnitRunner.class)
-
 @SutPackages(Service.class)
+@TestClasses({TestResources.class})
+@SutClasses({ValidationInterceptor.class})
 public abstract class TestBase {
     @Inject
     ServiceIntf sut;
@@ -119,5 +124,11 @@ public abstract class TestBase {
             }
         });
 
+    }
+
+
+    @Test(expected = EJBException.class)
+    public void doesCheckUsingBeanValidation() {
+        sut.newEntity1(1, null);
     }
 }

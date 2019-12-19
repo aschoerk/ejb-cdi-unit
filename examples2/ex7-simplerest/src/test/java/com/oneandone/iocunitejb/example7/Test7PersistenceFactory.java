@@ -3,14 +3,14 @@ package com.oneandone.iocunitejb.example7;
 import javax.enterprise.inject.Produces;
 import javax.persistence.EntityManager;
 
-import com.oneandone.iocunit.ejb.persistence.PersistenceFactory;
+import com.oneandone.iocunit.jpa.XmlAwarePersistenceFactory;
 
 /**
  * @author aschoerk
  */
-class Test7PersistenceFactory extends PersistenceFactory {
+class Test7PersistenceFactory extends XmlAwarePersistenceFactory {
     @Override
-    protected String getPersistenceUnitName() {
+    public String getPersistenceUnitName() {
         return "test";
     }
 

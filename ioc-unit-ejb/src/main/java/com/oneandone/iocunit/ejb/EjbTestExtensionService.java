@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -37,8 +38,9 @@ import com.oneandone.cdi.weldstarter.spi.WeldStarter;
 import com.oneandone.iocunit.ejb.jms.JmsMocksFactory;
 import com.oneandone.iocunit.ejb.jms.JmsProducers;
 import com.oneandone.iocunit.ejb.jms.JmsSingletons;
+import com.oneandone.iocunit.ejb.persistence.IocUnitTransactionSynchronizationRegistry;
 import com.oneandone.iocunit.ejb.persistence.PersistenceFactory;
-import com.oneandone.iocunit.ejb.persistence.SimulatedEntityTransaction;
+import com.oneandone.iocunit.ejb.persistence.PersistenceFactoryResources;
 import com.oneandone.iocunit.ejb.persistence.SimulatedTransactionManager;
 import com.oneandone.iocunit.ejb.resourcesimulators.SimulatedUserTransaction;
 import com.oneandone.iocunit.ejb.trainterceptors.TransactionalInterceptorBase;
@@ -142,8 +144,8 @@ public class EjbTestExtensionService implements TestExtensionService {
                 add(TransactionalInterceptorNever.class);
                 add(TransactionalInterceptorNotSupported.class);
                 add(TransactionalInterceptorSupports.class);
+                add(IocUnitTransactionSynchronizationRegistry.class);
                 add(SimulatedTransactionManager.class);
-                add(SimulatedEntityTransaction.class);
                 add(EjbUnitBeanInitializerClass.class);
                 add(EjbUnitTransactionServices.class);
                 add(JmsSingletons.class);
@@ -153,13 +155,14 @@ public class EjbTestExtensionService implements TestExtensionService {
                 add(AsynchronousManager.class);
                 add(AsynchronousMethodInterceptor.class);
                 add(AsynchronousMessageListenerProxy.class);
+                add(PersistenceFactoryResources.class);
             }
         };
         return result;
     }
 
     @Override
-    public void preStartupAction(WeldSetupClass weldSetup) {
+    public void preStartupAction(WeldSetupClass weldSetup, Class clazz, Method method) {
         for (Class<?> c : ejbTestExtensionServiceData.get().candidatesToStart) {
             if(!ejbTestExtensionServiceData.get().excludedClasses.contains(c)) {
                 if(!weldSetup.getBeanClasses().contains(c.getName())) {
@@ -177,7 +180,7 @@ public class EjbTestExtensionService implements TestExtensionService {
         if(!foundPersistenceFactory) {
             for (Metadata<Extension> x : weldSetup.getExtensions()) {
                 if(EjbExtensionExtended.class.isAssignableFrom(x.getValue().getClass())) {
-                    logger.error("Using ioc-unit-ejb-Extension without IOC-Unit-PersistenceFactory: "
+                    logger.warn("Using ioc-unit-ejb-Extension without IOC-Unit-PersistenceFactory: "
                                  + "no simulation of EntityManager and Transactions supported");
                 }
             }

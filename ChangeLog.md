@@ -4,6 +4,18 @@
 
 |Version|Changes|
 |-------|-------|
+|2.0.25|recognize Testclass in TestScopeExtension also by @Produces, Provide ResteasyClientBuilder|
+|2.0.24|ioc-unit-Resteasy: Provide ClientBuilder and WebTarget as availables |
+|2.0.23|return Forbidden(403) if not authorized by role|
+|2.0.22|fix handling problems and bugs with Resteasy-Auth-Testing|
+|2.0.21|added test of authorization to resteasy toolbox|
+|2.0.20|integrate dbunit-way to init dbms, TransactionSynchronisationRegistry|
+|2.0.19|fixes and tests for validator,  introduced JaxRSClasses to be able to define Rest-Resoirces and Providers explicitly|
+|2.0.18|new module ioc-unit-validate, allows it to define Beans (@ValidateClasses) where Validation should be activated during the tests|
+|2.0.17|Recognize Restresources even by @Path in interfaces, make jdbcSqlConverter work with XmlAwarePersistenceFactories Eclipselink, Phase4Guesser may not try to resolve Instance-Injects, weld(x)-starter will not bring javaee-api as dependency anymore|
+|2.0.16|make jdbcSqlConverter work with XmlAwarePersistenceFactories (persistence.xml) make TestPersistenceFactory final replace it by XmlLess- or XmlAwarePersistenceFactory| 
+|2.0.15|jdbcSqlConverter-interface also supported for JPA (hibernate, eclipselink) |
+|2.0.14|jdbcSqlConverter-interface allows the replacement of native-statements |
 |2.0.13|commons-lang3:3.8.1,enable only Interceptors without Priority automatically|
 |2.0.12|@Transactional, XmlLessPersistenceFactory |
 |2.0.11|Add generally @Provider-classes defined as Sut or Test to MockDispatcher. --> possible to define ObjectMapper, does also handle @Context in Provider especially: ExceptionMapper |

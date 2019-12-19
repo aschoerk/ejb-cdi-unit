@@ -1,6 +1,7 @@
 package iocunit.ejbresource;
 
 import javax.inject.Inject;
+import javax.persistence.EntityManager;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -10,6 +11,8 @@ import com.oneandone.iocunit.analyzer.annotations.SutPackagesDeep;
 import com.oneandone.iocunit.analyzer.annotations.TestClasses;
 
 import iocunit.ejbresource.em.Entity3;
+import iocunit.ejbresource.em.PUQual1;
+import iocunit.ejbresource.em.PUQual2;
 import iocunit.ejbresource.em.SutClass;
 
 /**
@@ -21,6 +24,17 @@ import iocunit.ejbresource.em.SutClass;
 public class TestEm3Pus {
     @Inject
     SutClass sutClass;
+
+    @PUQual1
+    @Inject
+    EntityManager em1;
+
+    @PUQual2
+    @Inject
+    EntityManager em2;
+
+    @Inject
+    EntityManager em3;
 
     @Test
     public void canWorkNativeInParallelWith3PersistenceContexts()  {

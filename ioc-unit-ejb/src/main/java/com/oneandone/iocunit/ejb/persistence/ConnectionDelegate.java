@@ -21,6 +21,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Executor;
 
+import org.hibernate.engine.jdbc.connections.spi.JdbcConnectionAccess;
 import org.hibernate.engine.spi.SessionImplementor;
 
 /**
@@ -28,37 +29,47 @@ import org.hibernate.engine.spi.SessionImplementor;
  */
 public class ConnectionDelegate implements Connection {
 
+    private final boolean doClose;
     Connection connection;
     private Object jdbcConnectionAccess;
     private boolean inAutocommit = false;
+    private JdbcSqlConverter jdbcSqlConverter;
+    private boolean shouldBeClosed = false;
 
-    public ConnectionDelegate(SessionImplementor sessionImplementor) {
+
+    public ConnectionDelegate(SessionImplementor sessionImplementor, JdbcSqlConverter jdbcSqlConverter) {
+        this.doClose = false;
+        this.jdbcSqlConverter = jdbcSqlConverter;
         try {
             try {
                 Method method = SessionImplementor.class.getMethod("connection");
-
                 this.connection = (Connection) method.invoke(sessionImplementor);
                 connection.setAutoCommit(false);
 
                 this.jdbcConnectionAccess = null;
-
             } catch (NoSuchMethodException e) {
                 try {
                     Method method = SessionImplementor.class.getMethod("getJdbcConnectionAccess");
                     jdbcConnectionAccess = method.invoke(sessionImplementor);
-                } catch (NoSuchMethodException e1) {
+                    this.connection = ((JdbcConnectionAccess)jdbcConnectionAccess).obtainConnection();
+                } catch (NoSuchMethodException | SQLException e1) {
                     throw new RuntimeException(e1);
                 }
             } catch (SQLException e) {
                 throw new RuntimeException(e);
             }
-        } catch (IllegalAccessException|InvocationTargetException e) {
+        } catch (IllegalAccessException | InvocationTargetException e) {
             throw new RuntimeException(e);
         }
     }
+    public ConnectionDelegate(final Connection connection, JdbcSqlConverter jdbcSqlConverter) {
+        this(connection, jdbcSqlConverter, true);
+    }
 
-    public ConnectionDelegate(final Connection connection) {
+    public ConnectionDelegate(final Connection connection, JdbcSqlConverter jdbcSqlConverter, boolean doClose) {
+        this.doClose = doClose;
         this.connection = connection;
+        this.jdbcSqlConverter = jdbcSqlConverter;
         try {
             connection.setAutoCommit(false);
         } catch (SQLException e) {
@@ -69,64 +80,100 @@ public class ConnectionDelegate implements Connection {
 
     }
 
+    void checkClosed() {
+        try {
+            if (shouldBeClosed || connection.isClosed())
+                throw new RuntimeException("connection already closed");
+        } catch (SQLException e) {
+            throw new RuntimeException("isClosed: ",e);
+        }
+    }
+
     @Override
     public Statement createStatement() throws SQLException {
-        return connection.createStatement();
+        checkClosed();
+        return new StatementDelegate(connection.createStatement(), jdbcSqlConverter);
     }
 
     @Override
     public PreparedStatement prepareStatement(String sql) throws SQLException {
-        return connection.prepareStatement(sql);
+        checkClosed();
+        return connection.prepareStatement(convert(sql));
+    }
+
+    private String convert(final String sql) {
+        if(jdbcSqlConverter != null) {
+            return jdbcSqlConverter.convert(sql);
+        }
+        else {
+            return sql;
+        }
     }
 
     @Override
     public CallableStatement prepareCall(String sql) throws SQLException {
-        return connection.prepareCall(sql);
+        checkClosed();
+        return connection.prepareCall(convert(sql));
     }
 
     @Override
     public String nativeSQL(String sql) throws SQLException {
-        return connection.nativeSQL(sql);
+        checkClosed();
+        return connection.nativeSQL(convert(sql));
     }
 
     @Override
     public boolean getAutoCommit() throws SQLException {
+        checkClosed();
         return connection.getAutoCommit();
     }
 
     @Override
     public void setAutoCommit(boolean autoCommit) throws SQLException {
+        checkClosed();
         connection.setAutoCommit(autoCommit);
-        inAutocommit = autoCommit;
     }
 
     @Override
     public void commit() throws SQLException {
+        checkClosed();
         connection.commit();
     }
 
     @Override
     public void rollback() throws SQLException {
+        checkClosed();
         connection.rollback();
     }
 
     @Override
     public void close() throws SQLException {
+        if (isClosed())
+            return;
         try {
-            if (!inAutocommit)
+            if(!inAutocommit) {
                 connection.commit();
+            }
         } catch (Exception e) {
             ;
         }
-        if (jdbcConnectionAccess != null) {
+        if(jdbcConnectionAccess != null) {
             try {
                 Method method = jdbcConnectionAccess.getClass().getMethod("releaseConnection", Connection.class);
                 method.invoke(jdbcConnectionAccess, connection);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
-        } else {
-            ; // don't close necessary for other operations in this session.
+        }
+        else {
+            if(doClose) {
+                shouldBeClosed = true;
+                try {
+                    connection.close();
+                } catch(Throwable thw) {
+                    throw new RuntimeException(thw);
+                }
+            }
         }
     }
 
@@ -137,26 +184,20 @@ public class ConnectionDelegate implements Connection {
 
     @Override
     public DatabaseMetaData getMetaData() throws SQLException {
+        checkClosed();
         return connection.getMetaData();
     }
 
     @Override
     public boolean isReadOnly() throws SQLException {
+        checkClosed();
         return connection.isReadOnly();
     }
 
-    /**
-     * Puts this connection in read-only mode as a hint to the driver to enable database optimizations.
-     * <P>
-     * <B>Note:</B> This method cannot be called during a transaction.
-     *
-     * @param readOnly
-     *            <code>true</code> enables read-only mode; <code>false</code> disables it
-     * @exception SQLException
-     *                if a database access error occurs, this method is called on a closed connection or this method is called during a transaction
-     */
+
     @Override
     public void setReadOnly(boolean readOnly) throws SQLException {
+        checkClosed();
         connection.setReadOnly(readOnly);
     }
 
@@ -164,321 +205,287 @@ public class ConnectionDelegate implements Connection {
      * Retrieves this <code>Connection</code> object's current catalog name.
      *
      * @return the current catalog name or <code>null</code> if there is none
-     * @exception SQLException
-     *                if a database access error occurs or this method is called on a closed connection
+     * @throws SQLException if a database access error occurs or this method is called on a closed connection
      * @see #setCatalog
      */
     @Override
     public String getCatalog() throws SQLException {
+        checkClosed();
         return connection.getCatalog();
     }
 
-    /**
-     * Sets the given catalog name in order to select a subspace of this <code>Connection</code> object's database in which to work.
-     * <P>
-     * If the driver does not support catalogs, it will silently ignore this request.
-     * <p>
-     * Calling {@code setCatalog} has no effect on previously created or prepared {@code Statement} objects. It is implementation defined whether a
-     * DBMS prepare operation takes place immediately when the {@code Connection} method {@code prepareStatement} or {@code prepareCall} is invoked.
-     * For maximum portability, {@code setCatalog} should be called before a {@code Statement} is created or prepared.
-     *
-     * @param catalog
-     *            the name of a catalog (subspace in this <code>Connection</code> object's database) in which to work
-     * @exception SQLException
-     *                if a database access error occurs or this method is called on a closed connection
-     * @see #getCatalog
-     */
+
     @Override
     public void setCatalog(String catalog) throws SQLException {
+        checkClosed();
         connection.setCatalog(catalog);
     }
 
-    /**
-     * Retrieves this <code>Connection</code> object's current transaction isolation level.
-     *
-     * @return the current transaction isolation level, which will be one of the following constants:
-     *         <code>Connection.TRANSACTION_READ_UNCOMMITTED</code>, <code>Connection.TRANSACTION_READ_COMMITTED</code>,
-     *         <code>Connection.TRANSACTION_REPEATABLE_READ</code>, <code>Connection.TRANSACTION_SERIALIZABLE</code>, or
-     *         <code>Connection.TRANSACTION_NONE</code>.
-     * @exception SQLException
-     *                if a database access error occurs or this method is called on a closed connection
-     * @see #setTransactionIsolation
-     */
+
     @Override
     public int getTransactionIsolation() throws SQLException {
+        checkClosed();
         return connection.getTransactionIsolation();
     }
 
-    /**
-     * Attempts to change the transaction isolation level for this <code>Connection</code> object to the one given. The constants defined in the
-     * interface <code>Connection</code> are the possible transaction isolation levels.
-     * <P>
-     * <B>Note:</B> If this method is called during a transaction, the result is implementation-defined.
-     *
-     * @param level
-     *            one of the following <code>Connection</code> constants: <code>Connection.TRANSACTION_READ_UNCOMMITTED</code>,
-     *            <code>Connection.TRANSACTION_READ_COMMITTED</code>, <code>Connection.TRANSACTION_REPEATABLE_READ</code>, or
-     *            <code>Connection.TRANSACTION_SERIALIZABLE</code>. (Note that <code>Connection.TRANSACTION_NONE</code> cannot be used because it
-     *            specifies that transactions are not supported.)
-     * @exception SQLException
-     *                if a database access error occurs, this method is called on a closed connection or the given parameter is not one of the
-     *                <code>Connection</code> constants
-     * @see DatabaseMetaData#supportsTransactionIsolationLevel
-     * @see #getTransactionIsolation
-     */
+
     @Override
     public void setTransactionIsolation(int level) throws SQLException {
+        checkClosed();
         connection.setTransactionIsolation(level);
     }
 
-    /**
-     * Retrieves the first warning reported by calls on this <code>Connection</code> object. If there is more than one warning, subsequent warnings
-     * will be chained to the first one and can be retrieved by calling the method <code>SQLWarning.getNextWarning</code> on the warning that was
-     * retrieved previously.
-     * <P>
-     * This method may not be called on a closed connection; doing so will cause an <code>SQLException</code> to be thrown.
-     * <P>
-     * <B>Note:</B> Subsequent warnings will be chained to this SQLWarning.
-     *
-     * @return the first <code>SQLWarning</code> object or <code>null</code> if there are none
-     * @exception SQLException
-     *                if a database access error occurs or this method is called on a closed connection
-     * @see SQLWarning
-     */
+
     @Override
     public SQLWarning getWarnings() throws SQLException {
+        checkClosed();
         return connection.getWarnings();
     }
 
-    /**
-     * Clears all warnings reported for this <code>Connection</code> object. After a call to this method, the method <code>getWarnings</code> returns
-     * <code>null</code> until a new warning is reported for this <code>Connection</code> object.
-     *
-     * @exception SQLException
-     *                SQLException if a database access error occurs or this method is called on a closed connection
-     */
+
     @Override
     public void clearWarnings() throws SQLException {
+        checkClosed();
         connection.clearWarnings();
     }
 
-    /**
-     * Creates a <code>Statement</code> object that will generate <code>ResultSet</code> objects with the given type and concurrency. This method is
-     * the same as the <code>createStatement</code> method above, but it allows the default result set type and concurrency to be overridden. The
-     * holdability of the created result sets can be determined by calling {@link #getHoldability}.
-     *
-     * @param resultSetType
-     *            a result set type; one of <code>ResultSet.TYPE_FORWARD_ONLY</code>, <code>ResultSet.TYPE_SCROLL_INSENSITIVE</code>, or
-     *            <code>ResultSet.TYPE_SCROLL_SENSITIVE</code>
-     * @param resultSetConcurrency
-     *            a concurrency type; one of <code>ResultSet.CONCUR_READ_ONLY</code> or <code>ResultSet.CONCUR_UPDATABLE</code>
-     * @return a new <code>Statement</code> object that will generate <code>ResultSet</code> objects with the given type and concurrency
-     * @exception SQLException
-     *                if a database access error occurs, this method is called on a closed connection or the given parameters are not
-     *                <code>ResultSet</code> constants indicating type and concurrency
-     * @since 1.2
-     */
+
     @Override
     public Statement createStatement(int resultSetType, int resultSetConcurrency) throws SQLException {
+        checkClosed();
         return connection.createStatement(resultSetType, resultSetConcurrency);
     }
 
     @Override
     public PreparedStatement prepareStatement(String sql, int resultSetType, int resultSetConcurrency) throws SQLException {
-        return connection.prepareStatement(sql, resultSetType, resultSetConcurrency);
+        checkClosed();
+        return connection.prepareStatement(convert(sql), resultSetType, resultSetConcurrency);
     }
 
 
     @Override
     public CallableStatement prepareCall(String sql, int resultSetType, int resultSetConcurrency) throws SQLException {
-        return connection.prepareCall(sql, resultSetType, resultSetConcurrency);
+        checkClosed();
+        return connection.prepareCall(convert(sql), resultSetType, resultSetConcurrency);
     }
 
 
     @Override
     public Map<String, Class<?>> getTypeMap() throws SQLException {
+        checkClosed();
         return connection.getTypeMap();
     }
 
     @Override
     public void setTypeMap(Map<String, Class<?>> map) throws SQLException {
+        checkClosed();
         connection.setTypeMap(map);
     }
 
 
     @Override
     public int getHoldability() throws SQLException {
+        checkClosed();
         return connection.getHoldability();
     }
 
 
     @Override
     public void setHoldability(int holdability) throws SQLException {
+        checkClosed();
         connection.setHoldability(holdability);
     }
 
 
     @Override
     public Savepoint setSavepoint() throws SQLException {
+        checkClosed();
         return connection.setSavepoint();
     }
 
 
     @Override
     public Savepoint setSavepoint(String name) throws SQLException {
+        checkClosed();
         return connection.setSavepoint(name);
     }
 
 
     @Override
     public void rollback(Savepoint savepoint) throws SQLException {
+        checkClosed();
         connection.rollback(savepoint);
     }
 
 
     @Override
     public void releaseSavepoint(Savepoint savepoint) throws SQLException {
+        checkClosed();
         connection.releaseSavepoint(savepoint);
     }
 
 
     @Override
     public Statement createStatement(int resultSetType, int resultSetConcurrency, int resultSetHoldability) throws SQLException {
+        checkClosed();
         return connection.createStatement(resultSetType, resultSetConcurrency, resultSetHoldability);
     }
 
 
     @Override
     public PreparedStatement prepareStatement(String sql, int resultSetType, int resultSetConcurrency, int resultSetHoldability) throws SQLException {
-        return connection.prepareStatement(sql, resultSetType, resultSetConcurrency, resultSetHoldability);
+        checkClosed();
+        return connection.prepareStatement(convert(sql), resultSetType, resultSetConcurrency, resultSetHoldability);
     }
 
 
     @Override
     public CallableStatement prepareCall(String sql, int resultSetType, int resultSetConcurrency, int resultSetHoldability) throws SQLException {
-        return connection.prepareCall(sql, resultSetType, resultSetConcurrency, resultSetHoldability);
+        checkClosed();
+        return connection.prepareCall(convert(sql), resultSetType, resultSetConcurrency, resultSetHoldability);
     }
 
 
     @Override
     public PreparedStatement prepareStatement(String sql, int autoGeneratedKeys) throws SQLException {
-        return connection.prepareStatement(sql, autoGeneratedKeys);
+        checkClosed();
+        return connection.prepareStatement(convert(sql), autoGeneratedKeys);
     }
 
 
     @Override
     public PreparedStatement prepareStatement(String sql, int[] columnIndexes) throws SQLException {
-        return connection.prepareStatement(sql, columnIndexes);
+        checkClosed();
+        return connection.prepareStatement(convert(sql), columnIndexes);
     }
 
 
     @Override
     public PreparedStatement prepareStatement(String sql, String[] columnNames) throws SQLException {
-        return connection.prepareStatement(sql, columnNames);
+        checkClosed();
+        return connection.prepareStatement(convert(sql), columnNames);
     }
 
 
     @Override
     public Clob createClob() throws SQLException {
+        checkClosed();
         return connection.createClob();
     }
 
 
     @Override
     public Blob createBlob() throws SQLException {
+        checkClosed();
         return connection.createBlob();
     }
 
 
     @Override
     public NClob createNClob() throws SQLException {
+        checkClosed();
         return connection.createNClob();
     }
 
 
     @Override
     public SQLXML createSQLXML() throws SQLException {
+        checkClosed();
         return connection.createSQLXML();
     }
 
     @Override
     public boolean isValid(int timeout) throws SQLException {
+        checkClosed();
         return connection.isValid(timeout);
     }
 
     @Override
     public void setClientInfo(String name, String value) throws SQLClientInfoException {
+        checkClosed();
         connection.setClientInfo(name, value);
     }
 
 
     @Override
     public String getClientInfo(String name) throws SQLException {
+        checkClosed();
         return connection.getClientInfo(name);
     }
 
     @Override
     public Properties getClientInfo() throws SQLException {
+        checkClosed();
         return connection.getClientInfo();
     }
 
 
     @Override
     public void setClientInfo(Properties properties) throws SQLClientInfoException {
+        checkClosed();
         connection.setClientInfo(properties);
     }
 
 
     @Override
     public Array createArrayOf(String typeName, Object[] elements) throws SQLException {
+        checkClosed();
         return connection.createArrayOf(typeName, elements);
     }
 
 
     @Override
     public Struct createStruct(String typeName, Object[] attributes) throws SQLException {
+        checkClosed();
         return connection.createStruct(typeName, attributes);
     }
 
 
     @Override
     public String getSchema() throws SQLException {
+        checkClosed();
         return connection.getSchema();
     }
 
 
     @Override
     public void setSchema(String schema) throws SQLException {
+        checkClosed();
         connection.setSchema(schema);
     }
 
 
     @Override
     public void abort(Executor executor) throws SQLException {
+        checkClosed();
         connection.abort(executor);
     }
 
 
     @Override
     public void setNetworkTimeout(Executor executor, int milliseconds) throws SQLException {
+        checkClosed();
         connection.setNetworkTimeout(executor, milliseconds);
     }
 
 
     @Override
     public int getNetworkTimeout() throws SQLException {
+        checkClosed();
         return connection.getNetworkTimeout();
     }
 
 
     @Override
     public <T> T unwrap(Class<T> iface) throws SQLException {
+        checkClosed();
         return connection.unwrap(iface);
     }
 
 
     @Override
     public boolean isWrapperFor(Class<?> iface) throws SQLException {
+        checkClosed();
         return connection.isWrapperFor(iface);
     }
 

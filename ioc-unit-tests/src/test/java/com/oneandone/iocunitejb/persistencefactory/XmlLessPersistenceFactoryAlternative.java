@@ -6,7 +6,7 @@ import javax.enterprise.inject.Produces;
 import javax.persistence.EntityManager;
 import javax.sql.DataSource;
 
-import com.oneandone.iocunit.ejb.XmlLessPersistenceFactory;
+import com.oneandone.iocunit.jpa.XmlLessPersistenceFactory;
 
 /**
  * @author aschoerk
@@ -14,7 +14,7 @@ import com.oneandone.iocunit.ejb.XmlLessPersistenceFactory;
 @ApplicationScoped
 public class XmlLessPersistenceFactoryAlternative extends XmlLessPersistenceFactory {
     @Override
-    protected String getPersistenceUnitName() {
+    public String getPersistenceUnitName() {
         return "testalternative";
     }
 

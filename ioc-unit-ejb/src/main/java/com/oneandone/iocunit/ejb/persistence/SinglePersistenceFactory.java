@@ -3,15 +3,17 @@ package com.oneandone.iocunit.ejb.persistence;
 import javax.enterprise.inject.Produces;
 import javax.persistence.EntityManager;
 
+import com.oneandone.iocunit.jpa.XmlAwarePersistenceFactory;
+
 /**
  * Convenience class for tests using only one persistence context in tests named: "testdb".
  *
  * @author aschoerk
  */
-public abstract class SinglePersistenceFactory extends PersistenceFactory {
+public abstract class SinglePersistenceFactory extends XmlAwarePersistenceFactory {
 
     @Override
-    protected String getPersistenceUnitName() {
+    public String getPersistenceUnitName() {
         return "testdb";
     }
 
