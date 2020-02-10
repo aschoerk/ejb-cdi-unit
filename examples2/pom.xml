@@ -21,6 +21,7 @@
         <module>ex8-jettyservlet_jpa</module>
         <module>mockito-example</module>
         <module>rest</module>
+        <module>jms</module>
     </modules>
     <build>
         <plugins>

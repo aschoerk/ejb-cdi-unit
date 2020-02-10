@@ -3,7 +3,6 @@ package com.oneandone.iocunit.ejb.jms;
 import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import javax.annotation.Resource;
 import javax.ejb.ActivationConfigProperty;
@@ -13,6 +12,7 @@ import javax.enterprise.inject.Instance;
 import javax.enterprise.inject.Produces;
 import javax.enterprise.inject.spi.InjectionPoint;
 import javax.inject.Inject;
+import javax.inject.Provider;
 import javax.inject.Singleton;
 import javax.jms.Connection;
 import javax.jms.ConnectionFactory;
@@ -20,9 +20,7 @@ import javax.jms.Destination;
 import javax.jms.JMSException;
 import javax.jms.MessageConsumer;
 import javax.jms.MessageListener;
-import javax.jms.Queue;
 import javax.jms.Session;
-import javax.jms.Topic;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,7 +38,7 @@ import com.oneandone.iocunit.ejb.AsynchronousMessageListenerProxy;
 public class JmsMocksFactory {
 
     @Inject
-    private JmsSingletons jmsSingletons;
+    private Provider<JmsSingletonsIntf> jmsSingletons;
 
     private AtomicBoolean initedMessageListeners = new AtomicBoolean(false);
 
@@ -68,7 +66,7 @@ public class JmsMocksFactory {
 
             }
         }
-        jmsSingletons.destroy();
+        jmsSingletons.get().destroy();
     }
 
 
@@ -107,17 +105,17 @@ public class JmsMocksFactory {
                 }
                 if (destinationType != null && destination != null) {
                     logger.info("JmsMdbConnector initMessageListeners destination: {}", destination);
-                    final Connection connection = jmsSingletons.getConnection();
+                    final Connection connection = jmsSingletons.get().getConnection();
                     Session session = acknowledgeMode == null ? connection.createSession(false, Session.AUTO_ACKNOWLEDGE) : connection.createSession(false, acknowledgeMode);
                     Destination dest = null;
                     if ("javax.jms.Queue".equals(destinationType)) {
-                        dest = jmsSingletons.getDestinationManager().createQueue(destination);
+                        dest = jmsSingletons.get().createQueue(destination);
                     } else if ("javax.jms.Topic".equals(destinationType)) {
-                        dest = jmsSingletons.getDestinationManager().createTopic(destination);
+                        dest = jmsSingletons.get().createTopic(destination);
                     }
                     final MessageConsumer messageConsumer = messageSelector == null ? session.createConsumer(dest) : session.createConsumer(dest, messageSelector);
                     messageConsumers.add(messageConsumer);
-                    messageConsumer.setMessageListener(new AsynchronousMessageListenerProxy(messageListener, asynchronousManager));
+                    messageConsumer.setMessageListener(new AsynchronousMessageListenerProxy(messageListener, asynchronousManager, jmsSingletons.get()));
                 }
             }
             logger.info("JmsMdbConnector.postConstruct initMessageListeners done");
@@ -133,7 +131,7 @@ public class JmsMocksFactory {
     @Produces
     @ApplicationScoped
     public ConnectionFactory getConnectionFactory() throws Exception {
-        return jmsSingletons.getConnectionFactory();
+        return jmsSingletons.get().getConnectionFactory();
     }
 
 

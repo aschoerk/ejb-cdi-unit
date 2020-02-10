@@ -28,6 +28,12 @@
             <version>1.7.21</version>
         </dependency>
         <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>1.2.3</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>javax</groupId>
             <artifactId>javaee-api</artifactId>
             <version>7.0</version>
@@ -60,6 +66,11 @@
         <dependency>
             <groupId>net.oneandone.ioc-unit</groupId>
             <artifactId>weld2-starter</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>net.oneandone.ioc-unit</groupId>
+            <artifactId>ioc-unit-jms-activemq</artifactId>
             <version>${project.version}</version>
         </dependency>
     </dependencies>
